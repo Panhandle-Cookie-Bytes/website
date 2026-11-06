@@ -5,6 +5,7 @@ const STORAGE = {
     quizzes: "ftc-quizzes-quizzes",
     results: "ftc-quizzes-results"
 };
+const WEBSITE_VERSION = "0:01:3";
 
 const sampleQuiz = {
     id: "sample-game-strategy",
@@ -268,7 +269,7 @@ function renderHeader(page, session) {
             <div class="footer-wrap">
                 <p>© ${new Date().getFullYear()} FTC Quizzes · Built for teams that build together.</p>
                 <div class="footer-links"><a href="index.html#about">About</a><a href="signin.html">Sign in</a></div>
-                <span class="site-version">Version 0:01:1</span>
+                <span class="site-version">Version ${WEBSITE_VERSION}</span>
             </div>
         </footer>`;
 }

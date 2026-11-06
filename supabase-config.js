@@ -1,4 +1,4 @@
 window.FTC_SUPABASE_CONFIG = {
-    url: "https://YOUR_PROJECT_ID.supabase.co",
-    anonKey: "YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY"
+    url: "https://xpwapclrfsbnlehlrkli.supabase.co",
+    anonKey: "sb_publishable_AO_PSFf04HwgtggVrxxhUA_Tga6E4d7"
 };

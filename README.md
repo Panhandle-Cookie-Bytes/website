@@ -30,6 +30,10 @@ If `supabase-config.js` still contains its placeholders, the site falls back to 
 
 The supplied `013132B` and `FFFFF` values are not valid CSS hex colors (hex colors need 3, 4, 6, or 8 digits). The site uses `#013132` and `#FFFFFF` for those values, alongside `#1C2541`, `#5BC0BE`, and `#3A506B`.
 
+## Website version
+
+The footer shows the website version in `major:minor:patch` format. Increment the patch for each change; after patch 9, reset it to 1 and increment the minor. After minor 9, reset it to 1 and increment the major. No version segment should be 10.
+
 ## Publish with GitHub Pages
 
 In your GitHub repository, open **Settings → Pages**. Under **Build and deployment**, choose **Deploy from a branch**, select `main` and `/(root)`, then save. GitHub Pages hosts the front end; Supabase provides authentication and the shared database.
