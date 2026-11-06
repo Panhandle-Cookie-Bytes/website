@@ -71,10 +71,15 @@ async function resolveSession() {
 
     const { data: profile, error: profileError } = await supabaseClient
         .from("profiles")
-        .select("id,email,role")
+        .select("id,email,role,display_name")
         .eq("id", authUser.id)
         .single();
     throwOnError(profileError, "Loading your profile");
+    if (authUser.email && !authUser.email_confirmed_at) {
+        const { error: signOutError } = await supabaseClient.auth.signOut();
+        throwOnError(signOutError, "Signing out before email verification");
+        return null;
+    }
 
     const { data: memberships, error: membershipError } = await supabaseClient
         .from("team_members")
@@ -84,14 +89,29 @@ async function resolveSession() {
     const role = profile.role === "coach" || memberships.some((membership) => membership.role === "coach")
         ? "coach"
         : "member";
-    return { id: authUser.id, email: profile.email, role };
+    return {
+        id: authUser.id,
+        email: profile.email,
+        displayName: profile.display_name || profile.email.split("@")[0],
+        role
+    };
 }
 
 async function fetchAppData(session, page) {
     if (!supabaseClient) {
+        const team = getTeam();
+        if (session.role === "coach" && !team.coaches.some((coach) => coach.email === session.email)) {
+            team.coaches.push({
+                userId: session.email,
+                email: session.email,
+                displayName: session.displayName || session.email.split("@")[0],
+                role: "coach"
+            });
+            saveStorage(STORAGE.team, team);
+        }
         return {
             quizzes: getQuizzes(),
-            team: getTeam(),
+            team,
             results: readStorage(STORAGE.results, {}),
             invitations: []
         };
@@ -132,12 +152,13 @@ async function fetchAppData(session, page) {
     if (myMembership) {
         const { data: rosterRows, error: rosterError } = await supabaseClient
             .from("team_members")
-            .select("user_id,role,profiles(email)")
+            .select("user_id,role,profiles(email,display_name)")
             .eq("team_id", myMembership.team_id);
         throwOnError(rosterError, "Loading the team roster");
         const roster = rosterRows.map((row) => ({
             userId: row.user_id,
             email: row.profiles?.email || "Team member",
+            displayName: row.profiles?.display_name || row.profiles?.email?.split("@")[0] || "Team member",
             role: row.role
         }));
         team = {
@@ -179,19 +200,13 @@ function getTeam() {
     const team = readStorage(STORAGE.team, {
         id: "team",
         name: "FTC Team 12345",
-        members: [
-            { email: "alex@team12345.org", role: "member" },
-            { email: "jordan@team12345.org", role: "member" },
-            { email: "sam@team12345.org", role: "member" },
-            { email: "taylor@team12345.org", role: "member" },
-            { email: "casey@team12345.org", role: "member" },
-            { email: "robin@team12345.org", role: "member" },
-            { email: "morgan@team12345.org", role: "member" },
-            { email: "jamie@team12345.org", role: "member" }
-        ],
-        coaches: [{ email: "coach@team12345.org", role: "coach" }]
+        members: [],
+        coaches: []
     });
     if (!team.id) team.id = "team";
+    team.members = (team.members || []).filter((person) => !person.email?.endsWith("@team12345.org"));
+    team.coaches = (team.coaches || []).filter((person) => !person.email?.endsWith("@team12345.org"));
+    saveStorage(STORAGE.team, team);
     return team;
 }
 
@@ -242,7 +257,7 @@ function renderHeader(page, session) {
                 <nav class="nav-links" aria-label="Main navigation">${links}</nav>
                 <div class="nav-actions">
                     ${loggedIn
-                        ? `<span class="nav-email">${escapeHtml(session.email)}</span><button class="button button-outline button-small" type="button" data-action="signout">Sign out</button>`
+                        ? `<span class="nav-email">${escapeHtml(session.displayName || session.email)}</span><button class="button button-outline button-small" type="button" data-action="signout">Sign out</button>`
                         : `<a class="button button-outline button-small" href="signin.html">Sign in</a><a class="button button-primary button-small" href="signin.html?mode=signup">Get started <span aria-hidden="true">→</span></a>`}
                 </div>
             </div>
@@ -255,6 +270,48 @@ function renderHeader(page, session) {
                 <div class="footer-links"><a href="index.html#about">About</a><a href="signin.html">Sign in</a></div>
             </div>
         </footer>`;
+}
+
+function bindProfile(session) {
+    const form = document.getElementById("display-name-form");
+    if (!form) return;
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        void (async () => {
+            const displayName = String(new FormData(form).get("displayName")).trim();
+            const message = document.getElementById("profile-message");
+            if (!displayName) {
+                message.textContent = "Enter a display name.";
+                message.className = "form-error";
+                return;
+            }
+            try {
+                if (supabaseClient) {
+                    const { error } = await supabaseClient
+                        .from("profiles")
+                        .update({ display_name: displayName })
+                        .eq("id", session.id);
+                    throwOnError(error, "Saving display name");
+                } else {
+                    const profiles = readStorage(STORAGE.profiles, {});
+                    profiles[session.email] = { ...profiles[session.email], role: session.role, displayName };
+                    saveStorage(STORAGE.profiles, profiles);
+                    saveStorage(STORAGE.session, { ...session, displayName });
+                }
+                message.textContent = "Display name saved.";
+                message.className = "form-success";
+                await render();
+                const updatedMessage = document.getElementById("profile-message");
+                if (updatedMessage) {
+                    updatedMessage.textContent = "Display name saved.";
+                    updatedMessage.className = "form-success";
+                }
+            } catch (error) {
+                message.textContent = error.message;
+                message.className = "form-error";
+            }
+        })();
+    });
 }
 
 function homePage() {
@@ -270,7 +327,7 @@ function homePage() {
                         <a class="button button-outline" href="#features">Explore the platform</a>
                     </div>
                     <div class="hero-note">
-                        <div class="avatar-stack" aria-hidden="true"><span>A</span><span>J</span><span>M</span><span>+</span></div>
+                        <span class="hero-note-icon" aria-hidden="true">✦</span>
                         <span>For curious builders, dedicated coaches, and teams that never stop learning.</span>
                     </div>
                 </div>
@@ -331,12 +388,14 @@ function signInPage() {
                     <button class="auth-tab" type="button" role="tab" data-mode="signup">Create account</button>
                 </div>
                 <form id="auth-form" class="form-grid">
+                    <div class="field hidden" id="display-name-field"><label for="auth-display-name">Display name</label><input id="auth-display-name" name="displayName" type="text" autocomplete="name" maxlength="60" placeholder="How should your team know you?" required></div>
                     <div class="field"><label for="auth-email">Email address</label><input id="auth-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
                     <div class="field"><label for="auth-password">Password</label><input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="6" placeholder="At least 6 characters" required></div>
                     <div class="field hidden" id="role-field"><label for="auth-role">I am a…</label><select id="auth-role" name="role"><option value="member">Team member / learner</option><option value="coach">Coach</option></select></div>
                     <p id="auth-message" class="form-note" aria-live="polite">Demo preview: accounts are stored only in this browser.</p>
+                    <button class="button button-outline button-small hidden" id="resend-verification" type="button">Resend verification email</button>
                     <button class="button button-primary button-block" id="auth-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
-                    <p class="form-footer">This static preview does not securely authenticate or store passwords. Connect an authentication provider before using real accounts.</p>
+                    <p class="form-footer">Supabase email accounts must verify their address before signing in. The browser-only preview does not send verification emails.</p>
                 </form>
             </section>
         </div>`;
@@ -369,8 +428,16 @@ function dashboardPage(session, data) {
     return `
         <div class="container">
             <section class="page-heading">
-                <div><div class="eyebrow"><span class="eyebrow-dot"></span>Your learning space</div><h1>Hey, ${escapeHtml(session.email.split("@")[0])}.</h1><p>Your next great idea could start with a question.</p></div>
+                <div><div class="eyebrow"><span class="eyebrow-dot"></span>Your learning space</div><h1>Hey, ${escapeHtml(session.displayName || session.email.split("@")[0])}.</h1><p>Your next great idea could start with a question.</p></div>
                 <a class="button button-primary" href="create-quiz.html">Create a quiz <span aria-hidden="true">+</span></a>
+            </section>
+            <section class="panel profile-panel">
+                <div class="panel-heading"><div><h2>Your display name</h2><p>This is the name your teammates see.</p></div></div>
+                <form id="display-name-form" class="profile-form">
+                    <div class="field"><label for="profile-display-name">Display name</label><input id="profile-display-name" name="displayName" maxlength="60" value="${escapeHtml(session.displayName || session.email.split("@")[0])}" required></div>
+                    <button class="button button-outline button-small" type="submit">Save name</button>
+                    <p id="profile-message" class="form-note" aria-live="polite"></p>
+                </form>
             </section>
             <section class="dashboard-stats" aria-label="Learning overview">
                 <div class="stat-card"><div class="stat-card-label">Available quizzes</div><div class="stat-card-value">${quizzes.length}</div><div class="stat-card-note">Ready when you are</div></div>
@@ -415,7 +482,7 @@ function teamPage(data, session) {
                         <div class="count-box"><strong>${coachCount}<span style="color:var(--muted);font-size:14px"> / 4</span></strong><span>Coaches</span></div>
                     </div>
                     <div class="roster-list">${roster.map((person) => `
-                        <div class="roster-row"><div class="person"><span class="person-avatar">${initials(person.email)}</span><span class="person-name">${escapeHtml(person.email)}<span class="person-role">${person.role === "coach" ? "Coach" : "Team member"}</span></span></div><span class="tag ${person.role === "coach" ? "" : "tag-muted"}">${person.role === "coach" ? "Coach" : "Member"}</span></div>`).join("")}</div>
+                        <div class="roster-row"><div class="person"><span class="person-avatar">${initials(person.displayName || person.email)}</span><span class="person-name">${escapeHtml(person.displayName || person.email)}<span class="person-role">${escapeHtml(person.email)} · ${person.role === "coach" ? "Coach" : "Team member"}</span></span></div><div class="roster-actions"><span class="tag ${person.role === "coach" ? "" : "tag-muted"}">${person.role === "coach" ? "Coach" : "Member"}</span>${person.role === "member" ? `<button class="button button-danger button-small" type="button" data-action="remove-member" data-user-id="${escapeHtml(person.userId || person.email)}">Remove</button>` : ""}</div></div>`).join("")}</div>
                 </section>
                 <div>
                     <section class="panel">
@@ -509,15 +576,18 @@ function renderAuthMode(mode) {
         tab.setAttribute("aria-selected", String(active));
     });
     document.getElementById("role-field").classList.toggle("hidden", !isSignup);
+    document.getElementById("display-name-field").classList.toggle("hidden", !isSignup);
+    document.getElementById("auth-display-name").required = isSignup;
     document.getElementById("auth-password").autocomplete = isSignup ? "new-password" : "current-password";
+    document.getElementById("resend-verification").classList.add("hidden");
     document.getElementById("auth-submit").innerHTML = `${isSignup ? "Create account" : "Sign in"} <span aria-hidden="true">→</span>`;
     document.getElementById("auth-message").textContent = supabaseClient
-        ? (isSignup ? "Create a secure account with Supabase." : "Your account is securely managed by Supabase.")
+        ? (isSignup ? "Create a secure account. Verify your email before signing in." : "Your account is securely managed by Supabase.")
         : (isSignup ? "Choose a learner or coach profile for this browser preview." : "Demo preview: accounts are stored only in this browser.");
 }
 
-function startSession(email, role) {
-    saveStorage(STORAGE.session, { email, role });
+function startSession(email, role, displayName) {
+    saveStorage(STORAGE.session, { email, role, displayName });
     window.location.href = "dashboard.html";
 }
 
@@ -552,8 +622,15 @@ function bindAuth() {
             const form = new FormData(event.currentTarget);
             const email = String(form.get("email")).trim().toLowerCase();
             const password = String(form.get("password"));
+            const displayName = String(form.get("displayName") || "").trim();
             const message = document.getElementById("auth-message");
             const isSignup = document.querySelector('[data-mode="signup"]').classList.contains("active");
+            document.getElementById("resend-verification").classList.add("hidden");
+            if (isSignup && !displayName) {
+                message.textContent = "Enter the display name you'd like your team to see.";
+                message.className = "form-error";
+                return;
+            }
             if (password.length < 6) {
                 message.textContent = "Please enter a password with at least 6 characters.";
                 message.className = "form-error";
@@ -570,14 +647,19 @@ function bindAuth() {
                             email,
                             password,
                             options: {
-                                data: { role },
+                                data: { role, display_name: displayName },
                                 emailRedirectTo: redirectUrl.href
                             }
                         });
                         throwOnError(error, "Creating your account");
-                        if (!data.session) {
-                            message.textContent = "Account created. Check your email to confirm your address, then sign in.";
+                        if (!data.user?.email_confirmed_at) {
+                            if (data.session) {
+                                const { error: signOutError } = await supabaseClient.auth.signOut();
+                                throwOnError(signOutError, "Signing out before email verification");
+                            }
+                            message.textContent = "Account created. Check your email to verify your address before signing in.";
                             message.className = "form-success";
+                            document.getElementById("resend-verification").classList.remove("hidden");
                             return;
                         }
                     } else {
@@ -591,15 +673,42 @@ function bindAuth() {
                 const profiles = readStorage(STORAGE.profiles, {});
                 const role = isSignup ? String(form.get("role")) : (profiles[email]?.role || "member");
                 if (isSignup) {
-                    profiles[email] = { role };
+                    profiles[email] = { role, displayName };
                     saveStorage(STORAGE.profiles, profiles);
                 }
-                startSession(email, role);
+                startSession(email, role, profiles[email]?.displayName || email.split("@")[0]);
             } catch (error) {
                 message.textContent = error.message;
                 message.className = "form-error";
+                if (error.code === "email_not_confirmed" || error.message.toLowerCase().includes("email not confirmed")) {
+                    message.textContent = "Please verify your email before signing in. Resend the confirmation email if needed.";
+                    document.getElementById("resend-verification").classList.remove("hidden");
+                }
             }
         })();
+    });
+
+    document.getElementById("resend-verification").addEventListener("click", async () => {
+        const email = document.getElementById("auth-email").value.trim().toLowerCase();
+        const message = document.getElementById("auth-message");
+        if (!email) {
+            message.textContent = "Enter your email address first.";
+            message.className = "form-error";
+            return;
+        }
+        try {
+            if (supabaseClient) {
+                const { error } = await supabaseClient.auth.resend({ type: "signup", email });
+                throwOnError(error, "Resending verification email");
+            } else {
+                throw new Error("Email verification is available after connecting Supabase.");
+            }
+            message.textContent = "Verification email sent. Check your inbox and spam folder.";
+            message.className = "form-success";
+        } catch (error) {
+            message.textContent = error.message;
+            message.className = "form-error";
+        }
     });
 }
 
@@ -667,9 +776,7 @@ function bindTeam(session, data) {
                 }
                 if (role === "coach" && team.coaches.length >= 4) throw new Error("Your team has reached its limit of 4 coaches.");
                 if (role === "member" && team.members.length >= 15) throw new Error("Your team has reached its limit of 15 members.");
-                (role === "coach" ? team.coaches : team.members).push({ email, role });
-                saveStorage(STORAGE.team, team);
-                await render();
+                throw new Error("Connect Supabase to invite real accounts. Demo mode does not add unregistered people to your roster.");
             } catch (error) {
                 message.textContent = error.message;
                 message.className = "form-error";
@@ -707,6 +814,33 @@ function bindTeam(session, data) {
             })();
         });
     }
+
+    document.querySelectorAll('[data-action="remove-member"]').forEach((button) => {
+        button.addEventListener("click", () => {
+            const userId = button.dataset.userId;
+            const person = data.team.members.find((member) => (member.userId || member.email) === userId);
+            if (!person || !window.confirm(`Remove ${person.displayName || person.email} from ${data.team.name}?`)) return;
+            void (async () => {
+                try {
+                    if (supabaseClient) {
+                        const { error } = await supabaseClient.rpc("remove_team_member", {
+                            _team_id: data.team.id,
+                            _user_id: userId
+                        });
+                        throwOnError(error, "Removing team member");
+                    } else {
+                        const team = getTeam();
+                        team.members = team.members.filter((member) => (member.userId || member.email) !== userId);
+                        saveStorage(STORAGE.team, team);
+                    }
+                    await render();
+                } catch (error) {
+                    const app = document.getElementById("app");
+                    app.insertAdjacentHTML("afterbegin", `<p class="form-error">${escapeHtml(error.message)}</p>`);
+                }
+            })();
+        });
+    });
 }
 
 function bindCreate() {
@@ -836,6 +970,7 @@ async function render() {
             const data = await fetchAppData(session, page);
             if (page === "dashboard") {
                 document.getElementById("app").innerHTML = dashboardPage(session, data);
+                bindProfile(session);
             } else if (page === "team") {
                 if (session.role !== "coach") {
                     document.getElementById("app").innerHTML = `<div class="container"><div class="empty-state"><strong>Coach access required</strong>Only coaches can manage the team roster and assignments.<p style="margin-top:18px"><a class="button button-primary" href="dashboard.html">Back to my quizzes</a></p></div></div>`;

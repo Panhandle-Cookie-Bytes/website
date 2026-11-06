@@ -3,9 +3,21 @@ create extension if not exists pgcrypto;
 create table public.profiles (
     id uuid primary key references auth.users (id) on delete cascade,
     email text not null,
+    display_name text not null default '',
     role text not null default 'member' check (role in ('member', 'coach')),
     created_at timestamptz not null default now()
 );
+
+update public.profiles p
+set display_name = coalesce(
+    nullif(trim(u.raw_user_meta_data ->> 'display_name'), ''),
+    nullif(trim(u.raw_user_meta_data ->> 'full_name'), ''),
+    nullif(trim(u.raw_user_meta_data ->> 'name'), ''),
+    nullif(split_part(u.email, '@', 1), ''),
+    'FTC member'
+)
+from auth.users u
+where u.id = p.id and p.display_name = '';
 
 create table public.teams (
     id uuid primary key default gen_random_uuid(),
@@ -89,10 +101,17 @@ security definer
 set search_path = ''
 as $$
 begin
-    insert into public.profiles (id, email, role)
+    insert into public.profiles (id, email, display_name, role)
     values (
         new.id,
         coalesce(new.email, ''),
+        coalesce(
+            nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''),
+            nullif(trim(new.raw_user_meta_data ->> 'full_name'), ''),
+            nullif(trim(new.raw_user_meta_data ->> 'name'), ''),
+            nullif(split_part(new.email, '@', 1), ''),
+            'FTC member'
+        ),
         case when new.raw_user_meta_data ->> 'role' = 'coach' then 'coach' else 'member' end
     );
     return new;
@@ -239,7 +258,8 @@ begin
            coach_count + count(*) filter (where role = 'coach')
     into member_count, coach_count
     from public.team_invitations
-    where team_id = new.team_id and expires_at > now();
+    where team_id = new.team_id and expires_at > now()
+      and lower(email) <> lower(new.email);
 
     if new.role = 'member' and member_count >= 15 then
         raise exception 'This team has reached its limit of 15 members and pending member invitations';
@@ -267,7 +287,11 @@ begin
     if (select auth.uid()) is null then
         raise exception 'You must be signed in to create a team';
     end if;
-    if not exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'coach') then
+    if not exists (select 1 from public.profiles where id = (select auth.uid()) and role = 'coach')
+       and not exists (
+           select 1 from public.team_members
+           where user_id = (select auth.uid()) and role = 'coach'
+       ) then
         raise exception 'Only coach accounts can create a team';
     end if;
     insert into public.teams (name, created_by)
@@ -343,6 +367,24 @@ begin
     on conflict (team_id, user_id) do nothing;
     delete from public.team_invitations where id = invitation.id;
     return invitation.team_id;
+end;
+$$;
+
+create or replace function public.remove_team_member(_team_id uuid, _user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+    if not public.is_team_coach(_team_id) then
+        raise exception 'Only a coach on this team can remove members';
+    end if;
+    delete from public.team_members
+    where team_id = _team_id and user_id = _user_id and role = 'member';
+    if not found then
+        raise exception 'This team member was not found or is a coach';
+    end if;
 end;
 $$;
 
@@ -452,6 +494,11 @@ alter table public.quiz_attempts enable row level security;
 create policy "Profiles are visible to self and teammates"
     on public.profiles for select to authenticated
     using (id = (select auth.uid()) or public.is_teammate(id));
+
+create policy "Users can update their own display name"
+    on public.profiles for update to authenticated
+    using (id = (select auth.uid()))
+    with check (id = (select auth.uid()));
 
 create policy "Team members can view their teams"
     on public.teams for select to authenticated
@@ -589,11 +636,13 @@ grant usage on schema public to authenticated;
 grant select on public.profiles, public.teams, public.team_members,
     public.team_invitations, public.quizzes, public.quiz_questions,
     public.quiz_options, public.quiz_answer_keys, public.quiz_attempts to authenticated;
+grant update (display_name) on public.profiles to authenticated;
 grant update on public.quizzes to authenticated;
 
 revoke all on function public.create_team(text) from public;
 revoke all on function public.create_team_invitation(uuid, text, text) from public;
 revoke all on function public.accept_team_invitation(uuid) from public;
+revoke all on function public.remove_team_member(uuid, uuid) from public;
 revoke all on function public.create_quiz(text, text, text, uuid, jsonb) from public;
 revoke all on function public.submit_quiz_attempt(uuid, integer[]) from public;
 revoke all on function public.is_team_member(uuid) from public, anon;
@@ -608,6 +657,7 @@ revoke all on function public.sync_profile_email() from public, anon, authentica
 grant execute on function public.create_team(text) to authenticated;
 grant execute on function public.create_team_invitation(uuid, text, text) to authenticated;
 grant execute on function public.accept_team_invitation(uuid) to authenticated;
+grant execute on function public.remove_team_member(uuid, uuid) to authenticated;
 grant execute on function public.create_quiz(text, text, text, uuid, jsonb) to authenticated;
 grant execute on function public.submit_quiz_attempt(uuid, integer[]) to authenticated;
 grant execute on function public.is_team_member(uuid) to authenticated;

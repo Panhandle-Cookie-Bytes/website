@@ -10,17 +10,19 @@ FTC Quizzes is a responsive, multi-page starter experience for FIRST Tech Challe
 - `team.html` — coach roster administration and team assignments
 - `create-quiz.html` — quiz authoring
 - `take-quiz.html` — quiz taking and score results
+- `supabase-schema.sql` — initial database setup for a new Supabase project
+- `supabase-migration-display-name.sql` — upgrade for projects that ran the earlier schema
 
 ## Connect Supabase
 
 1. Create a Supabase project.
-2. In the Supabase SQL Editor, run `supabase-schema.sql`. It creates the profile, team, invitation, quiz, answer-key, and attempt tables; row-level security policies; and RPC functions.
+2. For a new project, run `supabase-schema.sql` in the Supabase SQL Editor. If you already ran the earlier schema, run `supabase-migration-display-name.sql` instead to add display names and coach removal.
 3. Copy the project URL and **publishable key** (or legacy anon key) into `supabase-config.js`. Never put a `service_role` or secret key in this website.
-4. In Supabase **Authentication → URL Configuration**, set the site URL to your deployed site and add your local development URL to the redirect allow list.
+4. In Supabase **Authentication → Providers → Email**, enable email confirmations. Users must confirm their email before signing in; the sign-in page can resend a confirmation message. In **Authentication → URL Configuration**, set the site URL to your deployed site and add your local development URL to the redirect allow list.
 5. To enable Google or GitHub sign-in, configure each provider in Supabase **Authentication → Providers** and add the Supabase callback URL to the provider's console.
 6. Serve the folder over HTTP(S), such as with GitHub Pages or a local static server. Email confirmation behavior is controlled in Supabase Auth settings.
 
-Email/password auth, Google/GitHub OAuth, teams, invitations, quizzes, private answer keys, and quiz attempts use Supabase once the project config is filled in. Coaches create an invitation link and share it with the teammate; the site does not send invitation email. Quiz scores are calculated in a database function so answer keys are not sent to learners. Database policies enforce access and cap each team at 15 members and 4 coaches, including pending invitations.
+Email/password auth with verified email, Google/GitHub OAuth, editable display names, teams, invitations, quizzes, private answer keys, and quiz attempts use Supabase once the project config is filled in. Coaches can remove team members and create an invitation link to share; the site does not send invitation email. New rosters are empty—no sample teammates are pre-populated. Quiz scores are calculated in a database function so answer keys are not sent to learners. Database policies enforce access and cap each team at 15 members and 4 coaches, including pending invitations.
 
 If `supabase-config.js` still contains its placeholders, the site falls back to a browser-only demo. Demo state is not shared or secure and should not be used for real accounts.
 
