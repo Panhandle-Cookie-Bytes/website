@@ -17,7 +17,7 @@ FTC Quizzes is a responsive, multi-page starter experience for FIRST Tech Challe
 
 1. Create a Supabase project.
 2. For a new project, run `supabase-schema.sql` in the Supabase SQL Editor. If you already ran the earlier schema, run `supabase-migration-display-name.sql` instead to add display names and coach removal.
-3. Copy the project URL and **publishable key** (or legacy anon key) into `supabase-config.js`. Never put a `service_role` or secret key in this website.
+3. Copy the project URL and **publishable key** (or legacy anon key) into `supabase-config.js`. Use the base project URL (for example, `https://your-project.supabase.co`), without `/rest/v1/` or another API path. Never put a `service_role` or secret key in this website.
 4. In Supabase **Authentication → Providers → Email**, enable email confirmations. Users must confirm their email before signing in; the sign-in page can resend a confirmation message. In **Authentication → URL Configuration**, set the site URL to your deployed site and add your local development URL to the redirect allow list.
 5. To enable Google or GitHub sign-in, configure each provider in Supabase **Authentication → Providers** and add the Supabase callback URL to the provider's console.
 6. Serve the folder over HTTP(S), such as with GitHub Pages or a local static server. Email confirmation behavior is controlled in Supabase Auth settings.

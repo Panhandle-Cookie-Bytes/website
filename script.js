@@ -5,7 +5,7 @@ const STORAGE = {
     quizzes: "ftc-quizzes-quizzes",
     results: "ftc-quizzes-results"
 };
-const WEBSITE_VERSION = "0:01:3";
+const WEBSITE_VERSION = "0:01:4";
 
 const sampleQuiz = {
     id: "sample-game-strategy",
