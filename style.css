@@ -278,6 +278,7 @@ h1, h2, h3 { font-family: var(--font-display); }
 .site-footer { border-top: 1px solid var(--line); }
 .footer-wrap { display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 16px; color: var(--muted); font-size: 12px; }
 .footer-wrap p { margin: 0; }
+.site-version { color: #82989d; font-size: 11px; white-space: nowrap; }
 .footer-links { display: flex; gap: 20px; }
 .footer-links a:hover { color: var(--white); }
 
