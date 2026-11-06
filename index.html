@@ -3,22 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Website</title>
+    <meta name="description" content="FTC Quizzes helps robotics teams learn, practice, and grow together.">
+    <title>FTC Quizzes — Learn. Build. Compete.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="script.js" defer></script>
 </head>
-<body>
-    <header>
-        <h1>Welcome to My Website</h1>
-        <p>Built with GitHub Pages and Supabase</p>
-    </header>
-
-    <main>
-        <h2>Getting Started</h2>
-        <p>This is my new website!</p>
-        <button id="myButton">Click Me</button>
-        <p id="message" aria-live="polite"></p>
-    </main>
-
-    <script src="script.js"></script>
+<body data-page="home">
+    <div id="site-header"></div>
+    <main id="app"></main>
+    <div id="site-footer"></div>
 </body>
 </html>
