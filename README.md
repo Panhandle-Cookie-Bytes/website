@@ -63,15 +63,19 @@ npm run preview
 
 The production output is in `dist/`.
 
-## Deploy to Cloudflare Pages
+## Deploy to Cloudflare
 
-Connect the repository to Cloudflare Pages and configure:
+The project is configured for the **Cloudflare Workers Builds** workflow shown in the deployment logs:
 
 - Build command: `npm run build`
-- Build output directory: `dist`
-- Environment variables: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+- Deploy command: `npm run deploy`
+- Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as build environment variables for Preview and Production.
 
-The Pages `_redirects` file routes React Router paths back to the app entry point. Add the final Cloudflare Pages URL to Supabase's allowed redirect URLs. Do not deploy the old root-level static pages.
+[`wrangler.jsonc`](./wrangler.jsonc) publishes the `dist/` folder as static assets and enables the built-in single-page application fallback for React Router. There is intentionally no root rewrite rule: a catch-all `/* /index.html 200` in a Wrangler deployment can be rejected as an infinite redirect loop. `npm run deploy` uses the pinned Wrangler dependency and will need Cloudflare authorization in your deployment environment.
+
+If you instead create a separate **Cloudflare Pages** project connected directly to Git, set the build command to `npm run build`, the output directory to `dist`, and leave the deploy command empty. Pages also provides SPA fallback when there is no top-level `404.html`. Choose either Pages or Workers Builds for a deployment; the logs you shared are using Workers Builds. Do not deploy the old root-level static pages.
+
+After deployment, add the final `*.workers.dev` or custom-domain URL to Supabase's allowed redirect URLs. Build-time Vite variables must be present when `npm run build` runs; changing runtime Worker variables alone does not replace values already compiled into the static bundle.
 
 ## Phase 1 manual test
 
@@ -87,4 +91,4 @@ The Pages `_redirects` file routes React Router paths back to the app entry poin
 
 Phase 1 intentionally stops at the foundation, design system, navigation, homepage, authentication, and profiles. Teams are Phase 2; quiz authoring, discovery, and practice are Phase 3; live games are Phase 4; community features and further polish follow. No placeholder quiz/team actions or fabricated activity are shown.
 
-The footer version is `0:01:5`. For each website change, increment the last segment; after 9, reset it to 1 and increment the segment to its left. After the middle segment reaches 9, reset it to 1 and increment the first. No segment should be 10.
+The footer version is `0:01:6`. For each website change, increment the last segment; after 9, reset it to 1 and increment the segment to its left. After the middle segment reaches 9, reset it to 1 and increment the first. No segment should be 10.
