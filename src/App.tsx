@@ -7,13 +7,16 @@ import { HomePage } from "./pages/HomePage";
 import { AuthCallbackPage, ForgotPasswordPage, ResetPasswordPage } from "./pages/PasswordPages";
 import { ProfilePage } from "./pages/ProfilePage";
 import { PublicProfilePage } from "./pages/PublicProfilePage";
+import { TeamDashboardPage } from "./pages/TeamDashboardPage";
+import { TeamSettingsPage } from "./pages/TeamSettingsPage";
+import { TeamJoinPage, TeamsPage } from "./pages/TeamsPage";
 
 function NotFoundPage() {
   return (
     <section className="message-page">
       <span className="eyebrow"><span className="eyebrow-mark" /> Page not found</span>
       <h1>Looks like this path is still being built.</h1>
-      <p>That page isn’t part of Phase 1. Head back home to see what’s available now.</p>
+      <p>That page isn’t available yet. Head back home to see what’s available now.</p>
       <Link className="button button-primary" to="/">Back to home <span aria-hidden="true">→</span></Link>
     </section>
   );
@@ -34,6 +37,38 @@ function AppRoutes() {
           element={(
             <RouteGuard>
               <ProfilePage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="teams"
+          element={(
+            <RouteGuard>
+              <TeamsPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="teams/join"
+          element={(
+            <RouteGuard>
+              <TeamJoinPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="teams/:teamId/settings"
+          element={(
+            <RouteGuard>
+              <TeamSettingsPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="teams/:teamId"
+          element={(
+            <RouteGuard>
+              <TeamDashboardPage />
             </RouteGuard>
           )}
         />

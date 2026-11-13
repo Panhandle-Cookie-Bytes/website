@@ -168,7 +168,7 @@ export function HomePage() {
         <ol className="steps-list">
           <li><span className="step-count">01</span><div><h3>Make it yours</h3><p>Create your account and set up a profile that reflects how you learn.</p></div></li>
           <li><span className="step-count">02</span><div><h3>Find your focus</h3><p>Choose your FIRST program and the skills you want to strengthen.</p></div></li>
-          <li><span className="step-count">03</span><div><h3>Keep getting better</h3><p>Team learning and quiz experiences are coming in the next phases.</p></div></li>
+          <li><span className="step-count">03</span><div><h3>Keep getting better</h3><p>Join your team space, learn together, and get ready for quiz practice as the platform grows.</p></div></li>
         </ol>
       </section>
 

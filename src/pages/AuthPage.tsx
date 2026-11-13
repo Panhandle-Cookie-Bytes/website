@@ -18,8 +18,14 @@ export function AuthPage({ mode }: AuthPageProps) {
   const [resendEmail, setResendEmail] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const stateDestination = (location.state as { from?: string } | null)?.from;
+  const queryDestination = new URLSearchParams(location.search).get("next") ?? undefined;
+  const requestedDestination = stateDestination ?? queryDestination;
+  const destination = requestedDestination?.startsWith("/") && !requestedDestination.startsWith("//")
+    ? requestedDestination
+    : "/profile";
 
-  if (!loading && user) return <Navigate to="/profile" replace />;
+  if (!loading && user) return <Navigate to={destination} replace />;
   if (loading) return <div className="page-status" role="status">Checking your sign-in…</div>;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -42,7 +48,7 @@ export function AuthPage({ mode }: AuthPageProps) {
           throw new Error("Usernames must be 3–24 characters and use only lowercase letters, numbers, or underscores.");
         }
         if (password.length < 8) throw new Error("Use a password with at least 8 characters.");
-        const { data, error } = await signUp(email, password, displayName, enteredUsername || null);
+        const { data, error } = await signUp(email, password, displayName, enteredUsername || null, destination);
         if (error) throw error;
         if (!data.session) {
           setMessageKind("success");
@@ -50,13 +56,12 @@ export function AuthPage({ mode }: AuthPageProps) {
           setResendEmail(email);
           return;
         }
-        navigate("/profile", { replace: true });
+        navigate(destination, { replace: true });
         return;
       }
 
       const { error } = await signIn(email, password);
       if (error) throw error;
-      const destination = (location.state as { from?: string } | null)?.from ?? "/profile";
       navigate(destination, { replace: true });
     } catch (error) {
       setMessageKind("error");
@@ -76,7 +81,7 @@ export function AuthPage({ mode }: AuthPageProps) {
     setBusy(true);
     setMessage(null);
     try {
-      const { error } = await signInWithProvider(provider);
+      const { error } = await signInWithProvider(provider, destination);
       if (error) throw error;
     } catch (error) {
       setMessageKind("error");
@@ -89,7 +94,7 @@ export function AuthPage({ mode }: AuthPageProps) {
     if (!resendEmail) return;
     setBusy(true);
     try {
-      const { error } = await resendSignupConfirmation(resendEmail);
+      const { error } = await resendSignupConfirmation(resendEmail, destination);
       if (error) throw error;
       setMessageKind("success");
       setMessage("A new verification email has been sent. Check your inbox.");
@@ -166,8 +171,13 @@ export function AuthPage({ mode }: AuthPageProps) {
         </form>
 
         <p className="auth-switch">
-          {isSignUp ? "Already have an account?" : "New to FIRST Quiz?"}{" "}
-          <Link to={isSignUp ? "/sign-in" : "/sign-up"}>{isSignUp ? "Sign in" : "Create an account"}</Link>
+          {isSignUp ? "Already have an account?" : "New to Robotics Quizzes?"}{" "}
+          <Link
+            to={isSignUp ? "/sign-in" : "/sign-up"}
+            state={{ from: destination }}
+          >
+            {isSignUp ? "Sign in" : "Create an account"}
+          </Link>
         </p>
         <p className="auth-legal">By continuing, you agree to use the platform respectfully and keep your account secure.</p>
       </div>

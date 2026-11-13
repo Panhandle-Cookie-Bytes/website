@@ -122,13 +122,17 @@ export function AuthCallbackPage() {
   const navigate = useNavigate();
   const params = new URLSearchParams(window.location.search);
   const authError = params.get("error_description") || params.get("error");
+  const requestedDestination = params.get("next");
+  const destination = requestedDestination?.startsWith("/") && !requestedDestination.startsWith("//")
+    ? requestedDestination
+    : "/profile";
 
   useEffect(() => {
-    if (user && !loading) navigate("/profile", { replace: true });
-  }, [user, loading, navigate]);
+    if (user && !loading) navigate(destination, { replace: true });
+  }, [user, loading, navigate, destination]);
 
   if (loading) return <div className="page-status" role="status">Confirming your account…</div>;
-  if (user) return <div className="page-status" role="status">Your account is confirmed. Opening your profile…</div>;
+  if (user) return <div className="page-status" role="status">Your account is confirmed. Continuing…</div>;
   return (
     <section className="message-page">
       <span className="eyebrow"><span className="eyebrow-mark" /> Account verification</span>

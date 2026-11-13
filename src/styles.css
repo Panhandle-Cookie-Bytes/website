@@ -100,6 +100,7 @@ p { color: var(--muted); }
 }
 
 .brand { display: inline-flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.brand-logo { width: 43px; height: 43px; flex: 0 0 auto; border: 1px solid rgba(91, 192, 190, 0.35); border-radius: 50%; object-fit: cover; }
 .brand-mark {
   display: grid;
   width: 38px;
@@ -380,6 +381,88 @@ p { color: var(--muted); }
 .home-profile-error .notice { margin: 0; }
 .home-profile-error a { color: var(--teal); font-weight: 700; }
 .container-narrow { width: min(var(--content), calc(100% - 48px)); margin: 0 auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
+.teams-page { min-height: 580px; }
+.teams-page > .back-link { margin: 0 0 18px; }
+.team-page-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 18px; }
+.team-discovery-panel { margin-top: 17px; }
+.team-count { display: grid; min-width: 29px; height: 29px; padding: 0 8px; place-items: center; border: 1px solid rgba(91, 192, 190, 0.25); border-radius: 99px; color: var(--teal); background: rgba(91, 192, 190, 0.08); font-size: 11px; font-weight: 700; }
+.team-card-list { display: grid; gap: 9px; }
+.team-card { display: grid; grid-template-columns: 42px minmax(0, 1fr) 18px; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: rgba(1, 49, 50, 0.38); transition: border-color 150ms ease, transform 150ms ease; }
+.team-card:hover { border-color: rgba(91, 192, 190, 0.45); transform: translateY(-2px); }
+.team-card > svg { color: var(--teal); }
+.team-card-icon, .team-empty-icon { display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(91, 192, 190, 0.28); border-radius: 10px; color: var(--teal); background: rgba(91, 192, 190, 0.09); }
+.team-card-copy { display: grid; min-width: 0; }
+.team-card-copy strong { overflow: hidden; color: #e8f0ef; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.team-card-copy > span { overflow: hidden; color: #9eb3b7; font-size: 10px; text-overflow: ellipsis; text-transform: capitalize; white-space: nowrap; }
+.team-empty { margin: 0; padding: 24px 12px; color: #9eb3b7; text-align: center; font-size: 12px; }
+.team-empty-icon { margin: 0 auto 13px; }
+.team-empty h3 { margin: 0 0 5px; font-size: 16px; }
+.team-empty p { max-width: 270px; margin: 0 auto; font-size: 11px; }
+.team-join-link { width: 100%; margin-top: 15px; }
+.team-form { gap: 14px; }
+.team-form .button { justify-self: start; }
+.team-join-page { max-width: 650px; }
+.team-join-card { padding: 32px; }
+.team-public-page { padding-top: 25px; }
+.team-public-card { padding: 28px; }
+.team-public-card h1 { margin: 8px 0; font-size: clamp(32px, 5vw, 43px); letter-spacing: -1.5px; }
+.team-public-note { display: flex; align-items: center; gap: 10px; margin: 18px 0; padding: 13px; border: 1px solid var(--line); border-radius: 8px; color: #b7cacc; font-size: 11px; }
+.team-public-note svg { flex: 0 0 auto; color: var(--teal); }
+.team-join-card h1 { margin: 8px 0 6px; font-size: clamp(32px, 5vw, 43px); letter-spacing: -1.5px; }
+.team-join-card > p { font-size: 13px; }
+.invitation-preview { display: grid; gap: 4px; margin-top: 25px; padding-top: 20px; border-top: 1px solid var(--line); }
+.invitation-preview h2 { margin: 4px 0 0; font-size: 24px; }
+.invitation-preview p { margin: 0 0 3px; font-size: 12px; }
+.invitation-preview .button { justify-self: start; margin-top: 13px; }
+.team-hero { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: start; gap: 18px; margin-bottom: 17px; padding: 25px; }
+.team-hero-icon { display: grid; width: 58px; height: 58px; place-items: center; border: 1px solid rgba(91, 192, 190, 0.3); border-radius: 13px; color: var(--teal); background: rgba(91, 192, 190, 0.1); }
+.team-hero-copy h1 { margin: 4px 0 5px; font-size: clamp(27px, 4vw, 37px); line-height: 1.15; letter-spacing: -1.2px; }
+.team-hero-copy > p { margin: 0 0 11px; font-size: 12px; }
+.team-hero-copy .eyebrow { font-size: 9px; }
+.team-hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.team-hero-actions .button { min-height: 39px; padding: 0 12px; font-size: 11px; }
+.team-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 17px; }
+.team-stat { display: grid; grid-template-columns: 24px 1fr; align-items: center; column-gap: 9px; padding: 13px 15px; }
+.team-stat svg { grid-row: span 2; color: var(--teal); }
+.team-stat strong { color: #edf5f4; font: 600 18px var(--display); }
+.team-stat > span { color: #9eb3b7; font-size: 10px; }
+.team-roster-panel { padding: 22px; }
+.team-roster { display: grid; }
+.roster-row { display: grid; grid-template-columns: 39px minmax(0, 1fr) auto auto; align-items: center; gap: 12px; min-height: 66px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.roster-avatar { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(91, 192, 190, 0.34); border-radius: 50%; color: var(--teal); background: rgba(91, 192, 190, 0.09); font: 600 14px var(--display); }
+.roster-member-copy { display: grid; min-width: 0; }
+.roster-member-copy strong { overflow: hidden; color: #e6eeee; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.roster-member-copy > span { overflow: hidden; color: #91a8aa; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.role-badge { justify-self: start; padding: 4px 8px; border: 1px solid rgba(91, 192, 190, 0.23); border-radius: 99px; color: #bad8d7; background: rgba(91, 192, 190, 0.06); font-size: 9px; text-transform: capitalize; white-space: nowrap; }
+.role-select { min-width: 116px; min-height: 34px; padding: 5px 8px; border: 1px solid rgba(255, 255, 255, 0.17); border-radius: 7px; color: var(--white); background: #102f3b; font-size: 11px; }
+.roster-remove { color: #ffaaa7; font-size: 10px; }
+.team-leave-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 15px; padding-top: 17px; border-top: 1px solid var(--line); }
+.team-leave-row p { margin: 0; font-size: 11px; }
+.team-leave-row .button { min-height: 36px; font-size: 11px; }
+.team-settings-section { margin-bottom: 17px; scroll-margin-top: 100px; }
+.invitation-form .button { justify-self: start; }
+.generated-invitation { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 18px; padding: 14px; border: 1px solid rgba(91, 192, 190, 0.3); border-radius: 8px; background: rgba(91, 192, 190, 0.07); }
+.generated-invitation > div { display: grid; min-width: 0; gap: 5px; }
+.generated-invitation .eyebrow { font-size: 8px; }
+.generated-invitation code { overflow-wrap: anywhere; color: #eef6f5; font-size: 13px; letter-spacing: 0.5px; }
+.generated-invitation .button { flex: 0 0 auto; }
+.invitation-list-heading { display: flex; align-items: center; justify-content: space-between; margin: 24px 0 8px; }
+.invitation-list-heading h3 { margin: 0; font-size: 14px; }
+.invitation-list-heading > span { color: #9eb3b7; font-size: 10px; }
+.invitation-list { display: grid; }
+.invitation-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; min-height: 49px; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.invitation-meta, .invitation-status { color: #9eb3b7; font-size: 10px; }
+.invitation-status.is-active { color: var(--success); }
+.invitation-row .text-button { font-size: 10px; }
+.ownership-form { align-items: end; }
+.ownership-form .button { margin-bottom: 1px; }
+.danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-top: 30px; padding-top: 21px; border-top: 1px solid rgba(255, 170, 167, 0.22); }
+.danger-zone h3 { margin: 0 0 4px; color: #ffd2d0; font-size: 14px; }
+.danger-zone p { margin: 0; font-size: 11px; }
+.button-danger { min-height: 40px; border-color: rgba(255, 170, 167, 0.34); color: #ffd2d0; background: rgba(157, 57, 61, 0.16); }
+.button-danger:hover:not(:disabled) { border-color: rgba(255, 170, 167, 0.65); background: rgba(157, 57, 61, 0.28); }
 
 @media (max-width: 940px) {
   .hero-grid { min-height: 580px; grid-template-columns: 1fr 0.87fr; gap: 23px; }
@@ -391,6 +474,9 @@ p { color: var(--muted); }
   .auth-page { gap: 35px; }
   .account-grid { grid-template-columns: 240px minmax(0, 1fr); }
   .account-panel { padding: 19px; }
+  .team-hero { grid-template-columns: 50px minmax(0, 1fr); }
+  .team-hero-icon { width: 50px; height: 50px; }
+  .team-hero-actions { grid-column: 2; justify-content: flex-start; }
 }
 
 @media (max-width: 760px) {
@@ -428,12 +514,22 @@ p { color: var(--muted); }
   .account-page { padding-top: 43px; }
   .account-grid { grid-template-columns: 1fr; }
   .account-summary { position: static; }
+  .team-page-grid { grid-template-columns: 1fr; }
+  .team-stat-grid { gap: 8px; }
+  .team-stat { padding: 11px 9px; column-gap: 6px; }
+  .team-stat strong { font-size: 16px; }
+  .team-stat > span { font-size: 9px; }
+  .roster-row { grid-template-columns: 38px minmax(0, 1fr) auto; }
+  .roster-remove { grid-column: 2 / -1; justify-self: end; }
+  .team-hero { padding: 19px; }
+  .team-hero-actions { flex-direction: column; align-items: stretch; }
+  .team-hero-actions .button { width: 100%; }
   .footer-bottom { flex-direction: column; gap: 7px; }
 }
 
 @media (max-width: 500px) {
   .nav-wrap, .hero-grid, .content-section, .steps-section, .site-footer, .account-page { width: calc(100% - 32px); }
-  .brand-name { font-size: 16px; }
+  .brand-name { font-size: 15px; }
   .hero-grid { padding-top: 43px; }
   .hero-copy h1 { font-size: clamp(40px, 11vw, 53px); letter-spacing: -2.3px; }
   .hero-description { font-size: 14px; }
@@ -474,6 +570,22 @@ p { color: var(--muted); }
   .account-page { padding-top: 34px; }
   .page-heading h1 { font-size: 34px; }
   .account-panel { padding: 17px 14px; }
+  .team-join-card { padding: 21px 17px; }
+  .team-hero { grid-template-columns: 1fr; gap: 12px; }
+  .team-hero-actions { grid-column: auto; }
+  .team-stat-grid { grid-template-columns: 1fr; }
+  .team-stat { grid-template-columns: 25px 1fr; }
+  .team-roster-panel { padding: 17px 14px; }
+  .roster-row { grid-template-columns: 35px minmax(0, 1fr) auto; gap: 8px; }
+  .roster-avatar { width: 34px; height: 34px; }
+  .role-select { min-width: 95px; max-width: 108px; font-size: 10px; }
+  .team-leave-row, .danger-zone { align-items: stretch; flex-direction: column; }
+  .team-leave-row .button, .danger-zone .button { align-self: flex-start; }
+  .generated-invitation { align-items: flex-start; flex-direction: column; }
+  .invitation-row { grid-template-columns: auto 1fr auto; gap: 7px; padding: 8px 0; }
+  .invitation-status { grid-column: 2; }
+  .invitation-row .text-button { grid-column: 3; grid-row: 1 / span 2; }
+  .ownership-form { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; gap: 14px; }
   .avatar-edit-row { flex-wrap: wrap; }
   .avatar-edit-row > div { min-width: 140px; }

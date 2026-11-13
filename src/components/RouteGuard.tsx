@@ -10,7 +10,7 @@ export function RouteGuard({ children }: { children: ReactNode }) {
     return <div className="page-status" role="status">Checking your sign-in…</div>;
   }
   if (!user) {
-    return <Navigate to="/sign-in" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/sign-in" replace state={{ from: `${location.pathname}${location.search}` }} />;
   }
   return children;
 }

@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
-const APP_VERSION = "0:01:6";
+const APP_VERSION = "0:01:9";
 
 export function SiteLayout() {
   const { user, profile, signOut } = useAuth();
@@ -31,9 +31,9 @@ export function SiteLayout() {
       <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="site-header">
         <div className="nav-wrap">
-          <Link className="brand" to="/" aria-label="FIRST Quiz Platform home" onClick={closeMenu}>
-            <span className="brand-mark" aria-hidden="true">F<span>Q</span></span>
-            <span className="brand-name">FIRST<span>Quiz</span></span>
+          <Link className="brand" to="/" aria-label="Robotics Quizzes home" onClick={closeMenu}>
+            <img className="brand-logo" src="/robotics-quizzes-logo.jpg" alt="" />
+            <span className="brand-name">Robotics<span>Quizzes</span></span>
           </Link>
           <button
             className="mobile-menu-toggle"
@@ -53,6 +53,7 @@ export function SiteLayout() {
             <NavLink to="/" end onClick={closeMenu}>Home</NavLink>
             {user ? (
               <>
+                <NavLink to="/teams" onClick={closeMenu}>My teams</NavLink>
                 <NavLink to="/profile" onClick={closeMenu}>Profile</NavLink>
                 <button className="nav-action" type="button" onClick={() => void handleSignOut()}>
                   Sign out
@@ -87,16 +88,16 @@ export function SiteLayout() {
       </main>
       <footer className="site-footer">
         <div className="footer-inner">
-          <Link className="brand footer-brand" to="/">
-            <span className="brand-mark" aria-hidden="true">F<span>Q</span></span>
-            <span className="brand-name">FIRST<span>Quiz</span></span>
+          <Link className="brand footer-brand" to="/" aria-label="Robotics Quizzes home">
+            <img className="brand-logo" src="/robotics-quizzes-logo.jpg" alt="" />
+            <span className="brand-name">Robotics<span>Quizzes</span></span>
           </Link>
           <p>Made for teams who learn by building.</p>
           <span className="site-version">Version {APP_VERSION}</span>
         </div>
         <div className="footer-bottom">
           <span>Independent community project. FIRST® is a registered trademark of For Inspiration and Recognition of Science and Technology.</span>
-          <span>© {new Date().getFullYear()} FIRST Quiz Platform</span>
+          <span>© {new Date().getFullYear()} Robotics Quizzes</span>
         </div>
       </footer>
     </>
