@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Settings, Shield, Users } from "lucide-react";
+import { TeamQuizAssignments } from "../components/TeamQuizAssignments";
 import { useAuth } from "../contexts/AuthContext";
 import {
   getTeamDetails,
@@ -165,6 +166,12 @@ export function TeamDashboardPage() {
         <div className="panel team-stat"><Shield size={18} aria-hidden="true" /><strong>{coachCount} / 4</strong><span>Coaches</span></div>
         <div className="panel team-stat"><Settings size={18} aria-hidden="true" /><strong>{leadershipCount}</strong><span>Owners &amp; administrators</span></div>
       </div>
+
+      <TeamQuizAssignments
+        teamId={team.id}
+        userId={user?.id ?? ""}
+        canManage={canInvite}
+      />
 
       <section className="panel account-panel team-roster-panel">
         <div className="panel-heading">

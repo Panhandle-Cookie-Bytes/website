@@ -69,13 +69,13 @@ export function HomePage() {
               )}
             </h1>
             <p className="hero-description">
-              A collaborative learning platform for FIRST Robotics. Master game rules,
-              grow your engineering knowledge, and get ready for your next challenge.
+              A collaborative learning platform for robotics. Build quizzes, practice
+              game rules and engineering concepts, and prepare your team for its next challenge.
             </p>
             <div className="hero-actions">
               {user ? (
-                <Link className="button button-primary" to="/profile">
-                  Open your profile <ArrowRight size={17} aria-hidden="true" />
+                <Link className="button button-primary" to="/quizzes">
+                  Explore quizzes <ArrowRight size={17} aria-hidden="true" />
                 </Link>
               ) : (
                 <Link className="button button-primary" to="/sign-up">
@@ -168,7 +168,7 @@ export function HomePage() {
         <ol className="steps-list">
           <li><span className="step-count">01</span><div><h3>Make it yours</h3><p>Create your account and set up a profile that reflects how you learn.</p></div></li>
           <li><span className="step-count">02</span><div><h3>Find your focus</h3><p>Choose your FIRST program and the skills you want to strengthen.</p></div></li>
-          <li><span className="step-count">03</span><div><h3>Keep getting better</h3><p>Join your team space, learn together, and get ready for quiz practice as the platform grows.</p></div></li>
+          <li><span className="step-count">03</span><div><h3>Keep getting better</h3><p>Practice quizzes on your own or complete the learning your coach assigns to your team.</p></div></li>
         </ol>
       </section>
 
@@ -179,8 +179,8 @@ export function HomePage() {
           <h2>Ready to build what’s next?</h2>
           <p>Join a community that learns by asking better questions.</p>
         </div>
-        <Link className="button button-light" to={user ? "/profile" : "/sign-up"}>
-          {user ? "View your profile" : "Get started"} <ArrowRight size={17} aria-hidden="true" />
+        <Link className="button button-light" to={user ? "/quizzes" : "/sign-up"}>
+          {user ? "Explore quizzes" : "Get started"} <ArrowRight size={17} aria-hidden="true" />
         </Link>
       </section>
     </>

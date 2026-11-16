@@ -10,6 +10,10 @@ import { PublicProfilePage } from "./pages/PublicProfilePage";
 import { TeamDashboardPage } from "./pages/TeamDashboardPage";
 import { TeamSettingsPage } from "./pages/TeamSettingsPage";
 import { TeamJoinPage, TeamsPage } from "./pages/TeamsPage";
+import { AboutPage } from "./pages/AboutPage";
+import { QuizEditorPage } from "./pages/QuizEditorPage";
+import { QuizDetailPage, QuizResultsPage, QuizTakePage } from "./pages/QuizPracticePages";
+import { QuizzesPage } from "./pages/QuizzesPage";
 
 function NotFoundPage() {
   return (
@@ -27,6 +31,7 @@ function AppRoutes() {
     <Routes>
       <Route element={<SiteLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="about" element={<AboutPage />} />
         <Route path="sign-in" element={<AuthPage mode="sign-in" />} />
         <Route path="sign-up" element={<AuthPage mode="sign-up" />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
@@ -69,6 +74,54 @@ function AppRoutes() {
           element={(
             <RouteGuard>
               <TeamDashboardPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="quizzes"
+          element={(
+            <RouteGuard>
+              <QuizzesPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="quizzes/create"
+          element={(
+            <RouteGuard>
+              <QuizEditorPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="quizzes/:quizId/edit"
+          element={(
+            <RouteGuard>
+              <QuizEditorPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="quizzes/:quizId/take"
+          element={(
+            <RouteGuard>
+              <QuizTakePage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="quizzes/:quizId/results/:attemptId"
+          element={(
+            <RouteGuard>
+              <QuizResultsPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="quizzes/:quizId"
+          element={(
+            <RouteGuard>
+              <QuizDetailPage />
             </RouteGuard>
           )}
         />

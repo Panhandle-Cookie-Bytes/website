@@ -71,6 +71,86 @@ export type TeamChanges = {
   visibility: TeamVisibility;
 };
 
+export type QuizStatus = "draft" | "published";
+
+export type Quiz = {
+  id: string;
+  created_by: string;
+  title: string;
+  description: string;
+  program: Program;
+  category: string;
+  visibility: TeamVisibility;
+  status: QuizStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type QuizQuestion = {
+  id: string;
+  quiz_id: string;
+  position: number;
+  prompt: string;
+  options: string[];
+  correct_option_index: number;
+  explanation: string;
+  created_at: string;
+};
+
+export type QuizQuestionInput = {
+  prompt: string;
+  options: string[];
+  correct_index: number;
+  explanation: string;
+};
+
+export type QuizEditorData = {
+  quiz: Quiz;
+  questions: QuizQuestionInput[];
+};
+
+export type QuizAttemptQuestion = {
+  question_id: string;
+  question_position: number;
+  prompt: string;
+  options: string[];
+};
+
+export type QuizAttemptStart = {
+  attempt_id: string;
+  quiz_id: string;
+  quiz_title: string;
+  question_id: string;
+  question_position: number;
+  prompt: string;
+  options: string[];
+};
+
+export type QuizAttemptResultRow = {
+  quiz_id: string;
+  quiz_title: string;
+  score: number;
+  correct_count: number;
+  total_questions: number;
+  finished_at: string;
+  question_id: string;
+  question_position: number;
+  prompt: string;
+  options: string[];
+  selected_option_index: number | null;
+  correct_option_index: number;
+  is_correct: boolean | null;
+  explanation: string;
+};
+
+export type TeamQuizAssignment = {
+  team_id: string;
+  quiz_id: string;
+  assigned_by: string;
+  due_at: string | null;
+  assigned_at: string;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -155,6 +235,112 @@ export interface Database {
         };
         Relationships: [];
       };
+      quizzes: {
+        Row: Quiz;
+        Insert: {
+          id?: string;
+          created_by: string;
+          title: string;
+          description?: string;
+          program: Program;
+          category: string;
+          visibility?: TeamVisibility;
+          status?: QuizStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          description?: string;
+          program?: Program;
+          category?: string;
+          visibility?: TeamVisibility;
+          status?: QuizStatus;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      quiz_questions: {
+        Row: QuizQuestion;
+        Insert: {
+          id?: string;
+          quiz_id: string;
+          position: number;
+          prompt: string;
+          options: string[];
+          correct_option_index: number;
+          explanation?: string;
+          created_at?: string;
+        };
+        Update: {
+          position?: number;
+          prompt?: string;
+          options?: string[];
+          correct_option_index?: number;
+          explanation?: string;
+        };
+        Relationships: [];
+      };
+      team_quiz_assignments: {
+        Row: TeamQuizAssignment;
+        Insert: {
+          team_id: string;
+          quiz_id: string;
+          assigned_by: string;
+          due_at?: string | null;
+          assigned_at?: string;
+        };
+        Update: {
+          assigned_by?: string;
+          due_at?: string | null;
+          assigned_at?: string;
+        };
+        Relationships: [];
+      };
+      quiz_attempts: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          user_id: string;
+          started_at: string;
+          finished_at: string | null;
+          score: number | null;
+          correct_count: number | null;
+          total_questions: number;
+        };
+        Insert: {
+          id?: string;
+          quiz_id: string;
+          user_id: string;
+          started_at?: string;
+          finished_at?: string | null;
+          score?: number | null;
+          correct_count?: number | null;
+          total_questions: number;
+        };
+        Update: {
+          finished_at?: string | null;
+          score?: number | null;
+          correct_count?: number | null;
+        };
+        Relationships: [];
+      };
+      quiz_attempt_answers: {
+        Row: {
+          attempt_id: string;
+          question_id: string;
+          selected_option_index: number;
+          is_correct: boolean;
+        };
+        Insert: {
+          attempt_id: string;
+          question_id: string;
+          selected_option_index: number;
+          is_correct: boolean;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -221,6 +407,79 @@ export interface Database {
       };
       delete_team: {
         Args: { _team_id: string };
+        Returns: undefined;
+      };
+      can_access_quiz: {
+        Args: { _quiz_id: string };
+        Returns: boolean;
+      };
+      create_quiz: {
+        Args: {
+          _title: string;
+          _description: string;
+          _program: Program;
+          _category: string;
+          _visibility: TeamVisibility;
+          _status: QuizStatus;
+          _questions: Json;
+        };
+        Returns: string;
+      };
+      update_quiz: {
+        Args: {
+          _quiz_id: string;
+          _title: string;
+          _description: string;
+          _program: Program;
+          _category: string;
+          _visibility: TeamVisibility;
+          _status: QuizStatus;
+          _questions: Json;
+        };
+        Returns: undefined;
+      };
+      get_quiz_editor: {
+        Args: { _quiz_id: string };
+        Returns: {
+          quiz_id: string;
+          title: string;
+          description: string;
+          program: string;
+          category: string;
+          visibility: string;
+          status: string;
+          question_id: string | null;
+          question_position: number | null;
+          prompt: string | null;
+          options: string[] | null;
+          correct_option_index: number | null;
+          explanation: string | null;
+        }[];
+      };
+      start_quiz_attempt: {
+        Args: { _quiz_id: string };
+        Returns: QuizAttemptStart[];
+      };
+      submit_quiz_attempt: {
+        Args: { _attempt_id: string; _answers: Json };
+        Returns: {
+          quiz_id: string;
+          score: number;
+          correct_count: number;
+          total_questions: number;
+          finished_at: string;
+        }[];
+      };
+      get_quiz_attempt_results: {
+        Args: { _attempt_id: string };
+        Returns: QuizAttemptResultRow[];
+      };
+      assign_quiz_to_team: {
+        Args: { _team_id: string; _quiz_id: string; _due_at?: string | null };
+        Returns: undefined;
+      };
+      remove_quiz_assignment: {
+        Args: { _team_id: string; _quiz_id: string };
         Returns: undefined;
       };
     };

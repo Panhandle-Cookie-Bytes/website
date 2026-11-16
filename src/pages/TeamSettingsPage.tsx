@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Copy, KeyRound, Shield, Trash2 } from "lucide-react";
 import { TeamForm } from "../components/TeamForm";
+import { TeamQuizAssignments } from "../components/TeamQuizAssignments";
 import { useAuth } from "../contexts/AuthContext";
 import {
   createTeamInvitation,
@@ -207,6 +208,14 @@ export function TeamSettingsPage() {
           </div>
           <TeamForm initialTeam={details.team} busy={busy} submitLabel="Save team settings" onSubmit={handleSave} />
         </section>
+      )}
+
+      {canManageInvitations && (
+        <TeamQuizAssignments
+          teamId={teamId}
+          userId={user?.id ?? ""}
+          canManage={canManageInvitations}
+        />
       )}
 
       {canManageInvitations && (
