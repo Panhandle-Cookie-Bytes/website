@@ -482,6 +482,33 @@ export interface Database {
         Args: { _team_id: string; _quiz_id: string };
         Returns: undefined;
       };
+      get_popular_public_quizzes: {
+        Args: { _limit?: number };
+        Returns: (Omit<Quiz, "created_by"> & { attempt_count: number })[];
+      };
+      get_home_dashboard_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          quizzes_completed: number;
+          average_score: number | null;
+          correct_answers: number;
+          current_streak: number;
+        }[];
+      };
+      get_home_recent_activity: {
+        Args: { _limit?: number };
+        Returns: {
+          activity_type: "completed" | "created";
+          attempt_id: string | null;
+          quiz_id: string;
+          quiz_title: string;
+          program: Program;
+          score: number | null;
+          correct_count: number | null;
+          total_questions: number | null;
+          occurred_at: string;
+        }[];
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

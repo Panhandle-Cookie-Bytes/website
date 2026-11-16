@@ -1,6 +1,6 @@
 # Robotics Quizzes
 
-A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides the public homepage, verified authentication, and user profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review.
+A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds public quiz discovery and a personalized homepage dashboard.
 
 ## Stack and theme
 
@@ -27,7 +27,7 @@ A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supab
    npm run dev
    ```
 
-Without these environment variables, the public homepage and About Us page remain available; Supabase actions show a configuration error. The app does not create simulated accounts, teams, quizzes, or members.
+Without these environment variables, the public homepage shell and About Us page remain available; Supabase-backed quiz discovery and account actions show a configuration error. The app does not create simulated accounts, teams, quizzes, or members.
 
 ## Set up Supabase
 
@@ -38,8 +38,9 @@ In the Supabase project, open **SQL Editor** and run these files in order:
 1. [`supabase/migrations/20261109000000_phase1_foundation.sql`](./supabase/migrations/20261109000000_phase1_foundation.sql) — creates or upgrades profiles, the Auth profile trigger, profile RLS, and private avatar storage.
 2. [`supabase/migrations/20261112000000_phase2_teams.sql`](./supabase/migrations/20261112000000_phase2_teams.sql) — creates teams, memberships, invitations, team roles, secure invite functions, and team RLS. Enforces up to **15 students and 4 coaches** per team.
 3. [`supabase/migrations/20261112190000_phase3_quizzes.sql`](./supabase/migrations/20261112190000_phase3_quizzes.sql) — creates quizzes, multiple-choice questions, team assignments, attempts, scoring, and protected quiz RPCs.
+4. [`supabase/migrations/20261116000000_phase4_homepage.sql`](./supabase/migrations/20261116000000_phase4_homepage.sql) — enables anonymous read-only access to published public quiz metadata and adds protected dashboard statistics/activity functions.
 
-If earlier migrations have already been applied, run only the migrations you have not applied yet. Do not skip Phase 2; Phase 3 depends on its team tables and access helpers.
+If earlier migrations have already been applied, run only the migrations you have not applied yet. Do not skip Phase 2; Phase 3 and Phase 4 depend on its team tables and access helpers.
 
 ### 2. Configure Supabase Auth URLs and providers
 
@@ -87,6 +88,10 @@ npm run deploy
 - `/` — homepage and entry points for teams and quiz practice.
 - `/about` — project mission and creator profiles.
 
+The signed-out homepage includes platform information, public quizzes ranked by completed attempts, and account creation links. The signed-in homepage shows your teams, recent quiz activity, recommendations based on your preferred FIRST program and team assignments, and database-derived completed quiz, score, correct-answer, and streak statistics. Users without activity see empty states instead of fabricated progress. The Phase 4 migration only exposes published public quiz metadata to anonymous visitors; private quizzes, answer keys, and personal dashboard data remain restricted.
+
+Live multiplayer quiz rooms are not implemented yet. The homepage labels them as planned; **Start a Game** opens the existing self-paced quiz library.
+
 To add creator information, edit `creators` in [`src/content/about.ts`](./src/content/about.ts). Add an object with `name`, `role`, and `bio`; `link` is optional. Creator information is intentionally kept in one file, and no names or bios are fabricated.
 
 ### Teams
@@ -121,6 +126,14 @@ Correct answers are not readable through the normal quiz/question APIs or sent t
 6. Attempt to edit a quiz after a submission; the database should reject changing its question set.
 7. Test quiz creation, discovery, assignment, practice, and About Us on desktop and mobile layouts.
 
+## Test Phase 4
+
+1. Apply the Phase 4 migration after Phases 1–3 and sign out. Verify the homepage shows only published public quizzes, ranked by completed attempts. Check that private and draft quizzes and all question answer keys remain unavailable to anonymous users.
+2. Create and complete quizzes using a signed-in account. Confirm the homepage shows that account’s teams, recent created/completed activity, scores, recommendations, and only its own progress statistics.
+3. Use an account with no teams or completed quizzes; verify the dashboard shows real zero/empty states, and that recommended quizzes reflect public quizzes and any team assignments.
+4. Set a preferred FIRST program in the profile and verify recommendations prioritize quizzes for that program.
+5. Test the signed-out homepage, dashboard, navigation links, and quiz cards on desktop and a narrow mobile viewport.
+
 Run local code checks:
 
 ```sh
@@ -129,4 +142,4 @@ npm run build
 npm run preview
 ```
 
-The footer version is `0:02:1`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
+The footer version is `0:02:2`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
