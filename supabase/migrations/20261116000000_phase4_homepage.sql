@@ -67,11 +67,17 @@ begin
     latest_day as (
         select max(activity_days.finished_day) as finished_day
         from activity_days
+    ),
+    totals as (
+        select count(*)::bigint as quizzes_completed,
+            avg(completed.score) as average_score,
+            coalesce(sum(completed.correct_count), 0)::bigint as correct_answers
+        from completed
     )
     select
-        count(*)::bigint,
-        avg(completed.score),
-        coalesce(sum(completed.correct_count), 0)::bigint,
+        totals.quizzes_completed,
+        totals.average_score,
+        totals.correct_answers,
         case
             when latest_day.finished_day >= current_date - 1 then (
                 select count(*)::integer
@@ -80,7 +86,7 @@ begin
             )
             else 0
         end
-    from completed
+    from totals
     cross join latest_day;
 end;
 $$;

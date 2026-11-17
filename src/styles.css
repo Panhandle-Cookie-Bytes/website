@@ -697,6 +697,7 @@ p { color: var(--muted); }
 
 @media (max-width: 500px) {
   .nav-wrap, .hero-grid, .content-section, .steps-section, .site-footer, .account-page { width: calc(100% - 32px);   }
+  }
 
   .home-popular-section, .home-dashboard {
     width: min(var(--content), calc(100% - 56px));
@@ -792,6 +793,8 @@ p { color: var(--muted); }
     .home-empty-state { align-items: flex-start; flex-wrap: wrap; padding: 15px; }
     .home-empty-state .text-link { margin-left: 35px; }
   }
+
+  @media (max-width: 500px) {
   .brand-name { font-size: 15px; }
   .hero-grid { padding-top: 43px; }
   .hero-copy h1 { font-size: clamp(40px, 11vw, 53px); letter-spacing: -2.3px; }

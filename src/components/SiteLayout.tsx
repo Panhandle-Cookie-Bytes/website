@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
-const APP_VERSION = "0:02:3";
+const APP_VERSION = "0:02:4";
 
 export function SiteLayout() {
   const { user, profile, signOut } = useAuth();

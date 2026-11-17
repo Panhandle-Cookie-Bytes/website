@@ -142,4 +142,4 @@ npm run build
 npm run preview
 ```
 
-The footer version is `0:02:2`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
+The footer version is `0:02:4`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
