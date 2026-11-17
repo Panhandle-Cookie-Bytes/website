@@ -63,6 +63,23 @@ interface DashboardData {
   activity: HomeActivity[];
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = error.message;
+    if (typeof message === "string" && message.length > 0) return message;
+  }
+  return fallback;
+}
+
+async function loadDashboardSection<T>(name: string, load: () => Promise<T>): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    throw new Error(`${name}: ${getErrorMessage(error, "request failed")}`);
+  }
+}
+
 function PopularQuizCards({ quizzes, loading, error }: {
   quizzes: PopularQuiz[];
   loading: boolean;
@@ -123,14 +140,14 @@ function DashboardHome({ displayName, userId, preferredProgram, profileError }: 
     setLoading(true);
     setError(null);
     void Promise.all([
-      listMyTeams(userId),
-      listAccessibleQuizzes(userId),
-      getHomeDashboardStats(),
-      getHomeRecentActivity(),
+      loadDashboardSection("Teams", () => listMyTeams(userId)),
+      loadDashboardSection("Quizzes", () => listAccessibleQuizzes(userId)),
+      loadDashboardSection("Statistics", getHomeDashboardStats),
+      loadDashboardSection("Recent activity", getHomeRecentActivity),
     ]).then(([teams, quizzes, stats, activity]) => {
       if (active) setData({ teams, quizzes, stats, activity });
     }).catch((loadError: unknown) => {
-      if (active) setError(loadError instanceof Error ? loadError.message : "Could not load your dashboard.");
+      if (active) setError(getErrorMessage(loadError, "Could not load your dashboard."));
     }).finally(() => {
       if (active) setLoading(false);
     });
@@ -299,7 +316,7 @@ export function HomePage() {
     void listPopularPublicQuizzes(6).then((result) => {
       if (active) setPopularQuizzes(result);
     }).catch((loadError: unknown) => {
-      if (active) setPopularError(loadError instanceof Error ? loadError.message : "Could not load public quizzes.");
+      if (active) setPopularError(getErrorMessage(loadError, "Could not load public quizzes."));
     }).finally(() => {
       if (active) setPopularLoading(false);
     });
