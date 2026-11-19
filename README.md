@@ -1,6 +1,6 @@
 # Robotics Quizzes
 
-A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds public quiz discovery and a personalized homepage dashboard.
+A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds public quiz discovery and a personalized homepage dashboard. Phase 5 adds hosted live quiz rooms with synchronized questions, timed scoring, and results.
 
 ## Stack and theme
 
@@ -39,6 +39,7 @@ In the Supabase project, open **SQL Editor** and run these files in order:
 2. [`supabase/migrations/20261112000000_phase2_teams.sql`](./supabase/migrations/20261112000000_phase2_teams.sql) — creates teams, memberships, invitations, team roles, secure invite functions, and team RLS. Enforces up to **15 students and 4 coaches** per team.
 3. [`supabase/migrations/20261112190000_phase3_quizzes.sql`](./supabase/migrations/20261112190000_phase3_quizzes.sql) — creates quizzes, multiple-choice questions, team assignments, attempts, scoring, and protected quiz RPCs.
 4. [`supabase/migrations/20261116000000_phase4_homepage.sql`](./supabase/migrations/20261116000000_phase4_homepage.sql) — enables anonymous read-only access to published public quiz metadata and adds protected dashboard statistics/activity functions.
+5. [`supabase/migrations/20261116010000_phase5_live_games.sql`](./supabase/migrations/20261116010000_phase5_live_games.sql) — creates live game rooms, secure join codes, server-side question snapshots and scoring, protected game RPCs, and adds safe room state to Supabase Realtime.
 
 If earlier migrations have already been applied, run only the migrations you have not applied yet. Do not skip Phase 2; Phase 3 and Phase 4 depend on its team tables and access helpers.
 
@@ -90,7 +91,14 @@ npm run deploy
 
 The signed-out homepage includes platform information, public quizzes ranked by completed attempts, and account creation links. The signed-in homepage shows your teams, recent quiz activity, recommendations based on your preferred FIRST program and team assignments, and database-derived completed quiz, score, correct-answer, and streak statistics. Users without activity see empty states instead of fabricated progress. The Phase 4 migration only exposes published public quiz metadata to anonymous visitors; private quizzes, answer keys, and personal dashboard data remain restricted.
 
-Live multiplayer quiz rooms are not implemented yet. The homepage labels them as planned; **Start a Game** opens the existing self-paced quiz library.
+### Live games
+
+- `/games` — host a game from a published quiz you can access, or join a room with its 16-character code.
+- `/games/:gameId` — share the lobby, play synchronized questions, and view the final leaderboard.
+
+Players must sign in and have access to the selected quiz. Public quizzes are joinable by any signed-in user; quizzes assigned to a team remain limited to members with that assignment. The host starts the game after at least one player joins. Questions run for 20 seconds, and any player can trigger the next question once the timer expires if the host disconnects. Hosts can also advance early. Scores and correct answers are validated by protected database functions; answer keys are never sent to players. The migration adds only safe game state to the `supabase_realtime` publication, and each user can subscribe only to rooms they host or joined.
+
+The migration adds `live_games` to Supabase Realtime when the standard `supabase_realtime` publication exists. If Realtime is unavailable in a project, room actions still work through the database; use the in-room Refresh message to check state while correcting the project’s Realtime configuration.
 
 To add creator information, edit `creators` in [`src/content/about.ts`](./src/content/about.ts). Add an object with `name`, `role`, and `bio`; `link` is optional. Creator information is intentionally kept in one file, and no names or bios are fabricated.
 
@@ -134,6 +142,15 @@ Correct answers are not readable through the normal quiz/question APIs or sent t
 4. Set a preferred FIRST program in the profile and verify recommendations prioritize quizzes for that program.
 5. Test the signed-out homepage, dashboard, navigation links, and quiz cards on desktop and a narrow mobile viewport.
 
+## Test Phase 5
+
+1. Apply the Phase 5 migration after Phases 1–4 and confirm it completes successfully in the Supabase SQL Editor.
+2. Sign in with two accounts. As the host, create and publish a quiz with several questions, then open **Live games** and create a room.
+3. Join the room from the second account with the displayed code. Confirm the host sees the player join, start the game, and answer from both accounts.
+4. Confirm the countdown advances the room, the leaderboard scores correct answers, the final question completes the game, and results persist after refreshing both room pages.
+5. Try joining a private/unassigned quiz as an account without access; it should be rejected. Confirm draft quizzes cannot be hosted.
+6. Test the lobby, question controls, timer, and final leaderboard on desktop and a narrow mobile viewport.
+
 Run local code checks:
 
 ```sh
@@ -142,4 +159,4 @@ npm run build
 npm run preview
 ```
 
-The footer version is `0:02:4`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
+The footer version is `0:02:5`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.

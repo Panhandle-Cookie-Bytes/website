@@ -14,6 +14,8 @@ import { AboutPage } from "./pages/AboutPage";
 import { QuizEditorPage } from "./pages/QuizEditorPage";
 import { QuizDetailPage, QuizResultsPage, QuizTakePage } from "./pages/QuizPracticePages";
 import { QuizzesPage } from "./pages/QuizzesPage";
+import { GameCenterPage } from "./pages/GameCenterPage";
+import { LiveGamePage } from "./pages/LiveGamePage";
 
 function NotFoundPage() {
   return (
@@ -82,6 +84,22 @@ function AppRoutes() {
           element={(
             <RouteGuard>
               <QuizzesPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="games"
+          element={(
+            <RouteGuard>
+              <GameCenterPage />
+            </RouteGuard>
+          )}
+        />
+        <Route
+          path="games/:gameId"
+          element={(
+            <RouteGuard>
+              <LiveGamePage />
             </RouteGuard>
           )}
         />

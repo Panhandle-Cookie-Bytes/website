@@ -151,6 +151,30 @@ export type TeamQuizAssignment = {
   assigned_at: string;
 };
 
+export type LiveGameStatus = "lobby" | "running" | "completed" | "cancelled";
+
+export type LiveGameSnapshotRow = {
+  game_id: string;
+  quiz_id: string;
+  quiz_title: string;
+  host_display_name: string;
+  is_host: boolean;
+  join_code: string | null;
+  status: LiveGameStatus;
+  current_question_position: number;
+  question_count: number;
+  question_prompt: string | null;
+  question_options: string[] | null;
+  question_started_at: string | null;
+  question_deadline: string | null;
+  player_display_name: string | null;
+  player_score: number | null;
+  player_streak: number | null;
+  is_current_user: boolean;
+  has_answered_current_question: boolean;
+  own_selected_option_index: number | null;
+};
+
 export interface Database {
   public: {
     Tables: {
@@ -341,6 +365,23 @@ export interface Database {
         Update: Record<string, never>;
         Relationships: [];
       };
+      live_games: {
+        Row: {
+          id: string;
+          quiz_id: string;
+          status: LiveGameStatus;
+          current_question_position: number;
+          question_started_at: string | null;
+          question_deadline: string | null;
+          created_at: string;
+          expires_at: string;
+          finished_at: string | null;
+          updated_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -508,6 +549,42 @@ export interface Database {
           total_questions: number | null;
           occurred_at: string;
         }[];
+      };
+      create_live_game: {
+        Args: { _quiz_id: string };
+        Returns: { game_id: string; join_code: string }[];
+      };
+      join_live_game: {
+        Args: { _join_code: string };
+        Returns: string;
+      };
+      get_live_game_snapshot: {
+        Args: { _game_id: string };
+        Returns: LiveGameSnapshotRow[];
+      };
+      start_live_game: {
+        Args: { _game_id: string };
+        Returns: undefined;
+      };
+      submit_live_game_answer: {
+        Args: {
+          _game_id: string;
+          _question_position: number;
+          _selected_option_index: number;
+        };
+        Returns: undefined;
+      };
+      advance_live_game: {
+        Args: {
+          _game_id: string;
+          _expected_question_position: number;
+          _expired_only?: boolean;
+        };
+        Returns: boolean;
+      };
+      cancel_live_game: {
+        Args: { _game_id: string };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;

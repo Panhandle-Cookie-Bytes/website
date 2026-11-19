@@ -32,7 +32,7 @@ const features = [
   {
     icon: Gamepad2,
     title: "Play live quiz games",
-    description: "Live team game rooms are planned. For now, start a self-paced quiz and build your score.",
+    description: "Host a live room or compete with teammates in timed, real-time quiz rounds.",
   },
   {
     icon: BookOpenCheck,
@@ -196,7 +196,7 @@ function DashboardHome({ displayName, userId, preferredProgram, profileError }: 
         <Link className="home-action-card" to="/teams/join">
           <span><UsersRound size={19} aria-hidden="true" /></span><strong>Join Team</strong><ArrowRight size={16} aria-hidden="true" />
         </Link>
-        <Link className="home-action-card" to="/quizzes">
+        <Link className="home-action-card" to="/games">
           <span><Gamepad2 size={19} aria-hidden="true" /></span><strong>Start a Game</strong><ArrowRight size={16} aria-hidden="true" />
         </Link>
         <Link className="home-action-card" to="/quizzes">
