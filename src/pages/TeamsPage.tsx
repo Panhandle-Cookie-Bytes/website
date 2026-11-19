@@ -73,7 +73,9 @@ export function TeamsPage() {
             <div className="team-card-list">
               {teams.map((team) => (
                 <Link className="team-card" key={team.id} to={`/teams/${team.id}`}>
-                  <span className="team-card-icon"><Users size={20} aria-hidden="true" /></span>
+                  <span className="team-card-icon">
+                    {team.logo_url ? <img src={team.logo_url} alt="" /> : <Users size={20} aria-hidden="true" />}
+                  </span>
                   <span className="team-card-copy">
                     <strong>{team.name}</strong>
                     <span>{team.program} · Team {team.team_number} · {team.role}</span>
@@ -114,7 +116,9 @@ export function TeamsPage() {
           <div className="team-card-list team-public-list">
             {publicTeams.map((team) => (
               <Link className="team-card" key={team.id} to={`/teams/${team.id}`}>
-                <span className="team-card-icon"><Users size={20} aria-hidden="true" /></span>
+                <span className="team-card-icon">
+                  {team.logo_url ? <img src={team.logo_url} alt="" /> : <Users size={20} aria-hidden="true" />}
+                </span>
                 <span className="team-card-copy">
                   <strong>{team.name}</strong>
                   <span>{team.program} · Team {team.team_number} · Public</span>

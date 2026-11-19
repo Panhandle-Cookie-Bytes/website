@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { createQuiz, getQuizEditor, updateQuiz, type QuizChanges } from "../services/quizService";
+import { canCreateQuizzes } from "../services/teamService";
 import type { Program, QuizQuestionInput, QuizStatus, TeamVisibility } from "../types/database";
 
 const programs: Program[] = ["FLL", "FTC", "FRC", "General FIRST"];
@@ -23,14 +24,28 @@ export function QuizEditorPage() {
   const [visibility, setVisibility] = useState<TeamVisibility>("private");
   const [status, setStatus] = useState<QuizStatus>("draft");
   const [questions, setQuestions] = useState<QuizQuestionInput[]>([makeQuestion()]);
-  const [loading, setLoading] = useState(isEditing);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [createAllowed, setCreateAllowed] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!quizId) return;
     let active = true;
     setLoading(true);
+    if (!quizId) {
+      void canCreateQuizzes().then((allowed) => {
+        if (active) setCreateAllowed(allowed);
+      }).catch((loadError: unknown) => {
+        if (active) {
+          setCreateAllowed(false);
+          setError(loadError instanceof Error ? loadError.message : "Could not check quiz-creation permission.");
+        }
+      }).finally(() => {
+        if (active) setLoading(false);
+      });
+      return () => { active = false; };
+    }
+
     void getQuizEditor(quizId).then((editor) => {
       if (!active) return;
       if (editor.quiz.created_by !== user?.id) {
@@ -129,6 +144,18 @@ export function QuizEditorPage() {
   }
 
   if (loading) return <div className="page-status" role="status">Loading quiz editor…</div>;
+  if (!isEditing && createAllowed === false) {
+    return (
+      <section className="message-page">
+        <span className="eyebrow"><span className="eyebrow-mark" /> Quiz workshop</span>
+        <h1>Quiz creation isn’t enabled.</h1>
+        {error
+          ? <p role="alert">{error}</p>
+          : <p>Ask a team owner or administrator to enable quiz creation in team settings.</p>}
+        <Link className="button button-primary" to="/quizzes">Back to quizzes</Link>
+      </section>
+    );
+  }
 
   return (
     <section className="account-page quiz-editor-page">

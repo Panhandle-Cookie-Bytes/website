@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Settings, Shield, Users } from "lucide-react";
+import { Activity, ArrowLeft, ArrowRight, BookOpen, GraduationCap, Settings, Shield, Trophy, Users } from "lucide-react";
 import { TeamQuizAssignments } from "../components/TeamQuizAssignments";
 import { useAuth } from "../contexts/AuthContext";
 import {
   getTeamDetails,
+  getTeamActivity,
+  getTeamDashboardStats,
+  getTeamLeaderboard,
   leaveTeam,
   removeTeamMember,
   setTeamMemberRole,
+  type TeamActivityItem,
+  type TeamDashboardStats,
   type TeamDetails,
+  type TeamLeaderboardEntry,
 } from "../services/teamService";
 import type { TeamRole } from "../types/database";
 
@@ -21,27 +27,53 @@ export function TeamDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [details, setDetails] = useState<TeamDetails | null>(null);
+  const [stats, setStats] = useState<TeamDashboardStats | null>(null);
+  const [activity, setActivity] = useState<TeamActivityItem[]>([]);
+  const [leaderboard, setLeaderboard] = useState<TeamLeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyMember, setBusyMember] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
 
   const loadTeam = useCallback(async () => {
-    const result = await getTeamDetails(teamId);
-    setDetails(result);
-  }, [teamId]);
+    const teamDetails = await getTeamDetails(teamId);
+    setDetails(teamDetails);
+    setInsightsError(null);
+    if (!teamDetails.members.some((member) => member.user_id === user?.id)) {
+      setStats(null);
+      setActivity([]);
+      setLeaderboard([]);
+      return;
+    }
+    setStats(null);
+    setActivity([]);
+    setLeaderboard([]);
+    try {
+      const [teamStats, teamActivity, teamLeaderboard] = await Promise.all([
+        getTeamDashboardStats(teamId),
+        getTeamActivity(teamId),
+        getTeamLeaderboard(teamId),
+      ]);
+      setStats(teamStats);
+      setActivity(teamActivity);
+      setLeaderboard(teamLeaderboard);
+    } catch (insightLoadError) {
+      setInsightsError(insightLoadError instanceof Error
+        ? insightLoadError.message
+        : "Could not load team statistics and activity.");
+    }
+  }, [teamId, user?.id]);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void getTeamDetails(teamId).then((result) => {
-      if (active) setDetails(result);
-    }).catch((loadError: unknown) => {
+    void loadTeam().catch((loadError: unknown) => {
       if (active) setError(loadError instanceof Error ? loadError.message : "Could not load this team.");
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [teamId]);
+  }, [loadTeam]);
 
   const currentMember = details?.members.find((member) => member.user_id === user?.id);
   const role = currentMember?.role;
@@ -104,6 +136,7 @@ export function TeamDashboardPage() {
       <section className="public-profile-page team-public-page">
         <Link className="back-link" to="/teams"><ArrowLeft size={14} aria-hidden="true" /> Back to my teams</Link>
         <article className="panel team-public-card">
+          {details.team.logo_url && <img className="team-public-logo" src={details.team.logo_url} alt={`${details.team.name} logo`} />}
           <span className="eyebrow">{details.team.program} · Team {details.team.team_number} · Public</span>
           <h1>{details.team.name}</h1>
           <p>{details.team.description || "A FIRST team space for learning and building together."}</p>
@@ -128,15 +161,15 @@ export function TeamDashboardPage() {
   }
 
   const { team, members } = details;
-  const studentCount = members.filter(({ role: memberRole }) => memberRole === "student").length;
-  const coachCount = members.filter(({ role: memberRole }) => memberRole === "coach").length;
-  const leadershipCount = members.filter(({ role: memberRole }) => memberRole === "owner" || memberRole === "administrator").length;
-
   return (
     <section className="account-page teams-page">
       <Link className="back-link" to="/teams"><ArrowLeft size={14} aria-hidden="true" /> Back to my teams</Link>
       <header className="team-hero panel">
-        <div className="team-hero-icon"><Users size={27} aria-hidden="true" /></div>
+        <div className="team-hero-icon">
+          {team.logo_url
+            ? <img src={team.logo_url} alt={`${team.name} logo`} />
+            : <Users size={27} aria-hidden="true" />}
+        </div>
         <div className="team-hero-copy">
           <span className="eyebrow">{team.program} · Team {team.team_number}</span>
           <h1>{team.name}</h1>
@@ -160,11 +193,15 @@ export function TeamDashboardPage() {
       </header>
 
       {error && <p className="notice notice-error" role="alert">{error}</p>}
+      {insightsError && <p className="notice notice-error" role="alert">Team insights couldn’t load: {insightsError}</p>}
 
-      <div className="team-stat-grid" aria-label="Team roster counts">
-        <div className="panel team-stat"><Users size={18} aria-hidden="true" /><strong>{studentCount} / 15</strong><span>Students</span></div>
-        <div className="panel team-stat"><Shield size={18} aria-hidden="true" /><strong>{coachCount} / 4</strong><span>Coaches</span></div>
-        <div className="panel team-stat"><Settings size={18} aria-hidden="true" /><strong>{leadershipCount}</strong><span>Owners &amp; administrators</span></div>
+      <div className="team-stat-grid" aria-label="Team statistics">
+        <div className="panel team-stat"><Users size={18} aria-hidden="true" /><strong>{stats?.member_count ?? "—"}</strong><span>Members</span></div>
+        <div className="panel team-stat"><GraduationCap size={18} aria-hidden="true" /><strong>{stats ? `${stats.student_count} / 15` : "—"}</strong><span>Students</span></div>
+        <div className="panel team-stat"><Shield size={18} aria-hidden="true" /><strong>{stats ? `${stats.coach_count} / 4` : "—"}</strong><span>Coaches</span></div>
+        <div className="panel team-stat"><BookOpen size={18} aria-hidden="true" /><strong>{stats?.assigned_quiz_count ?? "—"}</strong><span>Assigned quizzes</span></div>
+        <div className="panel team-stat"><Trophy size={18} aria-hidden="true" /><strong>{stats?.completed_attempt_count ?? "—"}</strong><span>Quiz completions</span></div>
+        <div className="panel team-stat"><Activity size={18} aria-hidden="true" /><strong>{stats?.active_learner_count ?? "—"}</strong><span>Active learners</span></div>
       </div>
 
       <TeamQuizAssignments
@@ -172,6 +209,59 @@ export function TeamDashboardPage() {
         userId={user?.id ?? ""}
         canManage={canInvite}
       />
+
+      <div className="team-insights-grid">
+        <section className="panel account-panel team-insight-panel">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">{role === "student" ? "Your progress" : "Team progress"}</span>
+              <h2>{role === "student" ? "Your recent activity" : "Recent team activity"}</h2>
+            </div>
+            <span className="security-icon"><Activity size={18} aria-hidden="true" /></span>
+          </div>
+          {insightsError ? (
+            <p className="team-empty">Recent activity is unavailable.</p>
+          ) : activity.length ? (
+            <div className="team-activity-list">
+              {activity.map((item) => (
+                <article className="team-activity-row" key={item.attempt_id}>
+                  <span className="team-activity-mark"><BookOpen size={15} aria-hidden="true" /></span>
+                  <div className="team-activity-copy">
+                    <strong>{item.member_display_name} completed <Link to={`/quizzes/${item.quiz_id}`}>{item.quiz_title}</Link></strong>
+                    <span>{item.correct_count}/{item.total_questions} correct · {new Date(item.occurred_at).toLocaleDateString()}</span>
+                  </div>
+                  <strong className="team-activity-score">{item.score}%</strong>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="team-empty">Completed attempts on assigned quizzes will appear here.</p>
+          )}
+        </section>
+
+        <section className="panel account-panel team-insight-panel">
+          <div className="panel-heading">
+            <div><span className="eyebrow">Assigned quiz results</span><h2>Team leaderboard</h2></div>
+            <span className="security-icon"><Trophy size={18} aria-hidden="true" /></span>
+          </div>
+          {insightsError ? (
+            <p className="team-empty">The leaderboard is unavailable.</p>
+          ) : leaderboard.some((entry) => entry.average_score !== null) ? (
+            <ol className="team-leaderboard-list">
+              {leaderboard.filter((entry) => entry.average_score !== null).map((entry, index) => (
+                <li className="team-leaderboard-row" key={`${entry.member_display_name}-${index}`}>
+                  <span className="team-leaderboard-rank">{index + 1}</span>
+                  <span className="team-leaderboard-name">{entry.member_display_name}</span>
+                  <span className="team-leaderboard-meta">{entry.completed_attempts} completed · {entry.correct_answers} correct</span>
+                  <strong>{Math.round(entry.average_score ?? 0)}%</strong>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="team-empty">The leaderboard will appear after teammates complete assigned quizzes.</p>
+          )}
+        </section>
+      </div>
 
       <section className="panel account-panel team-roster-panel">
         <div className="panel-heading">

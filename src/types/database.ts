@@ -30,6 +30,7 @@ export type Team = {
   description: string;
   logo_url: string | null;
   visibility: TeamVisibility;
+  allow_student_quiz_creation: boolean;
   owner_id: string;
   created_at: string;
   updated_at: string;
@@ -69,6 +70,7 @@ export type TeamChanges = {
   program: Program;
   description: string;
   visibility: TeamVisibility;
+  allow_student_quiz_creation: boolean;
 };
 
 export type QuizStatus = "draft" | "published";
@@ -210,6 +212,7 @@ export interface Database {
           description?: string;
           logo_url?: string | null;
           visibility?: TeamVisibility;
+          allow_student_quiz_creation?: boolean;
           owner_id: string;
           created_at?: string;
           updated_at?: string;
@@ -221,6 +224,7 @@ export interface Database {
           description?: string;
           logo_url?: string | null;
           visibility?: TeamVisibility;
+          allow_student_quiz_creation?: boolean;
           owner_id?: string;
           updated_at?: string;
         };
@@ -392,6 +396,7 @@ export interface Database {
           _program: Program;
           _description: string;
           _visibility: TeamVisibility;
+          _allow_student_quiz_creation?: boolean;
         };
         Returns: string;
       };
@@ -403,8 +408,13 @@ export interface Database {
           _program: Program;
           _description: string;
           _visibility: TeamVisibility;
+          _allow_student_quiz_creation: boolean;
         };
         Returns: undefined;
+      };
+      can_create_quizzes: {
+        Args: Record<string, never>;
+        Returns: boolean;
       };
       create_team_invitation: {
         Args: {
@@ -584,6 +594,44 @@ export interface Database {
       };
       cancel_live_game: {
         Args: { _game_id: string };
+        Returns: undefined;
+      };
+      get_team_dashboard_stats: {
+        Args: { _team_id: string };
+        Returns: {
+          member_count: number;
+          student_count: number;
+          coach_count: number;
+          leadership_count: number;
+          assigned_quiz_count: number;
+          completed_attempt_count: number;
+          active_learner_count: number;
+        }[];
+      };
+      get_team_activity: {
+        Args: { _team_id: string; _limit?: number };
+        Returns: {
+          attempt_id: string;
+          member_display_name: string;
+          quiz_id: string;
+          quiz_title: string;
+          score: number;
+          correct_count: number;
+          total_questions: number;
+          occurred_at: string;
+        }[];
+      };
+      get_team_leaderboard: {
+        Args: { _team_id: string };
+        Returns: {
+          member_display_name: string;
+          average_score: number | null;
+          completed_attempts: number;
+          correct_answers: number;
+        }[];
+      };
+      set_team_logo: {
+        Args: { _team_id: string; _logo_path: string | null };
         Returns: undefined;
       };
     };

@@ -1,6 +1,6 @@
 # Robotics Quizzes
 
-A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds public quiz discovery and a personalized homepage dashboard. Phase 5 adds hosted live quiz rooms with synchronized questions, timed scoring, and results.
+A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds public quiz discovery and a personalized homepage dashboard. Phase 5 adds hosted live quiz rooms with synchronized questions, timed scoring, and results. Phase 6 adds team logos, configurable student quiz creation, team activity, statistics, and leaderboards.
 
 ## Stack and theme
 
@@ -40,6 +40,7 @@ In the Supabase project, open **SQL Editor** and run these files in order:
 3. [`supabase/migrations/20261112190000_phase3_quizzes.sql`](./supabase/migrations/20261112190000_phase3_quizzes.sql) — creates quizzes, multiple-choice questions, team assignments, attempts, scoring, and protected quiz RPCs.
 4. [`supabase/migrations/20261116000000_phase4_homepage.sql`](./supabase/migrations/20261116000000_phase4_homepage.sql) — enables anonymous read-only access to published public quiz metadata and adds protected dashboard statistics/activity functions.
 5. [`supabase/migrations/20261116010000_phase5_live_games.sql`](./supabase/migrations/20261116010000_phase5_live_games.sql) — creates live game rooms, secure join codes, server-side question snapshots and scoring, protected game RPCs, and adds safe room state to Supabase Realtime.
+6. [`supabase/migrations/20261117000000_phase6_team_management.sql`](./supabase/migrations/20261117000000_phase6_team_management.sql) — adds team quiz-creation settings, team dashboard statistics/activity/leaderboard RPCs, private team-logo storage, and migrates live-game join codes to 8 characters.
 
 If earlier migrations have already been applied, run only the migrations you have not applied yet. Do not skip Phase 2; Phase 3 and Phase 4 depend on its team tables and access helpers.
 
@@ -93,12 +94,14 @@ The signed-out homepage includes platform information, public quizzes ranked by 
 
 ### Live games
 
-- `/games` — host a game from a published quiz you can access, or join a room with its 16-character code.
+- `/games` — host a game from a published quiz you can access, or join a room with its 8-character code.
 - `/games/:gameId` — share the lobby, play synchronized questions, and view the final leaderboard.
 
 Players must sign in and have access to the selected quiz. Public quizzes are joinable by any signed-in user; quizzes assigned to a team remain limited to members with that assignment. The host starts the game after at least one player joins. Questions run for 20 seconds, and any player can trigger the next question once the timer expires if the host disconnects. Hosts can also advance early. Scores and correct answers are validated by protected database functions; answer keys are never sent to players. The migration adds only safe game state to the `supabase_realtime` publication, and each user can subscribe only to rooms they host or joined.
 
 The migration adds `live_games` to Supabase Realtime when the standard `supabase_realtime` publication exists. If Realtime is unavailable in a project, room actions still work through the database; use the in-room Refresh message to check state while correcting the project’s Realtime configuration.
+
+The code uses an unambiguous alphabet (`A-H`, `J-N`, `P-Z`, and `2-9`). Applying Phase 6 replaces codes on existing rooms; hosts can see the new code from the game lobby. Team invitation codes remain 32-character codes and are not changed by this migration.
 
 To add creator information, edit `creators` in [`src/content/about.ts`](./src/content/about.ts). Add an object with `name`, `role`, and `bio`; `link` is optional. Creator information is intentionally kept in one file, and no names or bios are fabricated.
 
@@ -109,7 +112,7 @@ To add creator information, edit `creators` in [`src/content/about.ts`](./src/co
 - `/teams/:teamId` — team dashboard, roster, and assigned quizzes.
 - `/teams/:teamId/settings` — team details, invitations, assignments, ownership transfer, and deletion.
 
-The creator is the team owner. Owners can appoint administrators; owners and administrators can manage team roles and settings. Coaches can invite students, remove students, and assign published quizzes. Students can take assigned quizzes and leave. Team invitations add actual registered users, not demo members.
+The creator is the team owner. Owners can appoint administrators; owners and administrators can manage team roles, settings, and team logos. Coaches can invite students, remove students, and assign published quizzes. Owners and administrators can allow students to create quizzes in team settings. Team dashboards show real roster counts, assigned-quiz activity, completion totals, active learners, and a leaderboard; students see their own recent activity, while coaches and team managers can review the team’s activity. Students can take assigned quizzes and leave. Team invitations add actual registered users, not demo members. A user who is a student in multiple teams can create quizzes if at least one of those teams allows it or they have a privileged role on another team.
 
 ### Quizzes
 
@@ -151,6 +154,15 @@ Correct answers are not readable through the normal quiz/question APIs or sent t
 5. Try joining a private/unassigned quiz as an account without access; it should be rejected. Confirm draft quizzes cannot be hosted.
 6. Test the lobby, question controls, timer, and final leaderboard on desktop and a narrow mobile viewport.
 
+## Test Phase 6
+
+1. Apply the Phase 6 migration after Phases 1–5. Verify the migration updates existing live-room codes and completes successfully.
+2. As a team owner or administrator, upload and remove a JPG, PNG, or WebP team logo. Confirm it appears on the team dashboard and team list, and that students cannot change it.
+3. In team settings, toggle student quiz creation. As a student, verify the create actions and direct create page reflect the setting; verify the database rejects a create request when disabled.
+4. Complete assigned quizzes as multiple real team members. Confirm team statistics, recent activity, and leaderboard update with database results; students should only see their own activity.
+5. Test team member, coach, and administrator limits and role permissions. Confirm students cannot manage team settings or the roster.
+6. Create a live game and verify its code is exactly 8 characters from the unambiguous alphabet; join using the code. Confirm older active game rooms show their new code after migration.
+
 Run local code checks:
 
 ```sh
@@ -159,4 +171,4 @@ npm run build
 npm run preview
 ```
 
-The footer version is `0:02:5`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
+The footer version is `0:02:6`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.

@@ -4,6 +4,10 @@ import { ArrowRight, Gamepad2, Radio, UsersRound } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { createLiveGame, joinLiveGame } from "../services/liveGameService";
 import { listAccessibleQuizzes, type QuizListItem } from "../services/quizService";
+import { canCreateQuizzes } from "../services/teamService";
+
+const JOIN_CODE_PATTERN = /[^A-HJ-NP-Z2-9]/g;
+const JOIN_CODE_LENGTH = 8;
 
 export function GameCenterPage() {
   const { user } = useAuth();
@@ -14,10 +18,16 @@ export function GameCenterPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [canCreate, setCanCreate] = useState(false);
+  const [permissionLoading, setPermissionLoading] = useState(true);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
     let active = true;
+    setCanCreate(false);
+    setPermissionLoading(true);
+    setPermissionError(null);
     void listAccessibleQuizzes(user.id).then((items) => {
       if (active) {
         const published = items.filter(({ quiz }) => quiz.status === "published");
@@ -28,6 +38,15 @@ export function GameCenterPage() {
       if (active) setError(loadError instanceof Error ? loadError.message : "Could not load your quizzes.");
     }).finally(() => {
       if (active) setLoading(false);
+    });
+    void canCreateQuizzes().then((allowed) => {
+      if (active) setCanCreate(allowed);
+    }).catch((permissionLoadError: unknown) => {
+      if (active) setPermissionError(permissionLoadError instanceof Error
+        ? permissionLoadError.message
+        : "Could not check quiz-creation permission.");
+    }).finally(() => {
+      if (active) setPermissionLoading(false);
     });
     return () => { active = false; };
   }, [user]);
@@ -70,6 +89,7 @@ export function GameCenterPage() {
       </header>
 
       {error && <p className="notice notice-error" role="alert">{error}</p>}
+      {permissionError && <p className="notice notice-error" role="alert">Quiz-creation access couldn’t be checked: {permissionError}</p>}
 
       <div className="game-center-grid">
         <form className="account-panel panel game-center-card" onSubmit={(event) => void handleCreate(event)}>
@@ -100,7 +120,8 @@ export function GameCenterPage() {
             <div className="game-empty-state">
               <Gamepad2 size={22} aria-hidden="true" />
               <span>There are no published quizzes available to host.</span>
-              <Link className="text-link" to="/quizzes/create">Create a quiz</Link>
+              {canCreate && <Link className="text-link" to="/quizzes/create">Create a quiz</Link>}
+              {!permissionLoading && !canCreate && !permissionError && <span>Ask a team owner or administrator to enable quiz creation.</span>}
             </div>
           )}
         </form>
@@ -108,20 +129,20 @@ export function GameCenterPage() {
         <form className="account-panel panel game-center-card" onSubmit={(event) => void handleJoin(event)}>
           <div className="game-card-icon"><UsersRound size={21} aria-hidden="true" /></div>
           <h2>Join a game</h2>
-          <p>Enter the 16-character room code from your host. You must have access to that quiz.</p>
+          <p>Enter the 8-character room code from your host. You must have access to that quiz.</p>
           <label className="field-label" htmlFor="game-code">Game code</label>
           <input
             id="game-code"
             className="form-control game-code-input"
             value={joinCode}
-            onChange={(event) => setJoinCode(event.target.value.toUpperCase().replace(/[^A-F0-9]/g, "").slice(0, 16))}
-            placeholder="A1B2C3D4E5F60718"
+            onChange={(event) => setJoinCode(event.target.value.toUpperCase().replace(JOIN_CODE_PATTERN, "").slice(0, JOIN_CODE_LENGTH))}
+            placeholder="AB23CDEF"
             autoComplete="off"
             inputMode="text"
-            maxLength={16}
+            maxLength={JOIN_CODE_LENGTH}
             required
           />
-          <button className="button button-secondary game-form-button" type="submit" disabled={busy || joinCode.length !== 16}>
+          <button className="button button-secondary game-form-button" type="submit" disabled={busy || joinCode.length !== JOIN_CODE_LENGTH}>
             {busy ? "Joining…" : "Join game"} <ArrowRight size={16} aria-hidden="true" />
           </button>
         </form>

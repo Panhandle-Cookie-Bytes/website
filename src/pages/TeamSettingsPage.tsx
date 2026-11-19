@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type ChangeEvent, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Copy, KeyRound, Shield, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Copy, KeyRound, Shield, Trash2 } from "lucide-react";
 import { TeamForm } from "../components/TeamForm";
 import { TeamQuizAssignments } from "../components/TeamQuizAssignments";
 import { useAuth } from "../contexts/AuthContext";
@@ -10,7 +10,9 @@ import {
   deleteTeam,
   getTeamDetails,
   getTeamInvitations,
+  removeTeamLogo,
   transferTeamOwnership,
+  uploadTeamLogo,
   updateTeam,
   type TeamDetails,
   type TeamInvitation,
@@ -38,6 +40,7 @@ export function TeamSettingsPage() {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [logoBusy, setLogoBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -79,6 +82,40 @@ export function TeamSettingsPage() {
       setError(saveError instanceof Error ? saveError.message : "Could not save team settings.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = "";
+    if (!file) return;
+    setLogoBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const cleanupWarning = await uploadTeamLogo(teamId, file);
+      await loadPage();
+      setMessage(cleanupWarning ?? "Team logo updated.");
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Could not upload the team logo.");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
+  async function handleLogoRemove() {
+    if (!details?.team.logo_url || !window.confirm("Remove this team logo?")) return;
+    setLogoBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const cleanupWarning = await removeTeamLogo(teamId);
+      await loadPage();
+      setMessage(cleanupWarning ?? "Team logo removed.");
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : "Could not remove the team logo.");
+    } finally {
+      setLogoBusy(false);
     }
   }
 
@@ -199,6 +236,42 @@ export function TeamSettingsPage() {
       </header>
       {error && <p className="notice notice-error" role="alert">{error}</p>}
       {message && <p className="notice notice-success" role="status">{message}</p>}
+
+      {canEditSettings && (
+        <section className="panel account-panel team-settings-section">
+          <div className="panel-heading">
+            <div><span className="eyebrow">Team identity</span><h2>Team logo</h2></div>
+            <span className="security-icon"><Camera size={18} aria-hidden="true" /></span>
+          </div>
+          <div className="team-logo-settings-row">
+            {details.team.logo_url
+              ? <img className="team-logo-preview" src={details.team.logo_url} alt={`${details.team.name} logo`} />
+              : <span className="team-logo-preview team-logo-placeholder" aria-hidden="true">{details.team.name.slice(0, 1).toUpperCase()}</span>}
+            <div className="team-logo-settings-copy">
+              <strong>{details.team.logo_url ? "Current team logo" : "No team logo uploaded"}</strong>
+              <p>JPG, PNG, or WebP. Maximum 3 MB. Owners and administrators can change this image.</p>
+            </div>
+            <label className="button button-secondary button-small upload-button">
+              <Camera size={15} aria-hidden="true" /> {logoBusy ? "Uploading…" : "Upload logo"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(event) => void handleLogoUpload(event)}
+                disabled={logoBusy}
+              />
+            </label>
+            {details.team.logo_url && (
+              <button
+                className="icon-button"
+                type="button"
+                aria-label="Remove team logo"
+                disabled={logoBusy}
+                onClick={() => void handleLogoRemove()}
+              ><Trash2 size={16} aria-hidden="true" /></button>
+            )}
+          </div>
+        </section>
+      )}
 
       {canEditSettings && (
         <section className="panel account-panel team-settings-section">

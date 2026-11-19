@@ -20,7 +20,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { getHomeDashboardStats, getHomeRecentActivity, listPopularPublicQuizzes, type HomeActivity, type HomeDashboardStats, type PopularQuiz } from "../services/homeService";
 import { listAccessibleQuizzes, type QuizListItem } from "../services/quizService";
-import { listMyTeams, type MyTeam } from "../services/teamService";
+import { canCreateQuizzes, listMyTeams, type MyTeam } from "../services/teamService";
 import type { Program } from "../types/database";
 
 const features = [
@@ -134,6 +134,8 @@ function DashboardHome({ displayName, userId, preferredProgram, profileError }: 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [canCreate, setCanCreate] = useState<boolean | null>(null);
+  const [createPermissionError, setCreatePermissionError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -150,6 +152,18 @@ function DashboardHome({ displayName, userId, preferredProgram, profileError }: 
       if (active) setError(getErrorMessage(loadError, "Could not load your dashboard."));
     }).finally(() => {
       if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [userId]);
+
+  useEffect(() => {
+    let active = true;
+    setCanCreate(null);
+    setCreatePermissionError(null);
+    void canCreateQuizzes().then((allowed) => {
+      if (active) setCanCreate(allowed);
+    }).catch((permissionError: unknown) => {
+      if (active) setCreatePermissionError(getErrorMessage(permissionError, "Could not check quiz-creation permission."));
     });
     return () => { active = false; };
   }, [userId]);
@@ -188,11 +202,16 @@ function DashboardHome({ displayName, userId, preferredProgram, profileError }: 
         </div>
       )}
       {error && <p className="notice notice-error" role="alert">Your dashboard couldn’t load: {error}</p>}
+      {createPermissionError && (
+        <p className="notice notice-error" role="alert">Quiz-creation access couldn’t be checked: {createPermissionError}</p>
+      )}
 
       <section className="home-quick-actions" aria-label="Quick actions">
-        <Link className="home-action-card home-action-primary" to="/quizzes/create">
-          <span><CirclePlus size={19} aria-hidden="true" /></span><strong>Create Quiz</strong><ArrowRight size={16} aria-hidden="true" />
-        </Link>
+        {canCreate && (
+          <Link className="home-action-card home-action-primary" to="/quizzes/create">
+            <span><CirclePlus size={19} aria-hidden="true" /></span><strong>Create Quiz</strong><ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        )}
         <Link className="home-action-card" to="/teams/join">
           <span><UsersRound size={19} aria-hidden="true" /></span><strong>Join Team</strong><ArrowRight size={16} aria-hidden="true" />
         </Link>
@@ -203,6 +222,9 @@ function DashboardHome({ displayName, userId, preferredProgram, profileError }: 
           <span><BookOpenCheck size={19} aria-hidden="true" /></span><strong>Explore Quizzes</strong><ArrowRight size={16} aria-hidden="true" />
         </Link>
       </section>
+      {canCreate === false && (
+        <p className="home-permission-note">Quiz creation is disabled for your team. Ask a team owner or administrator to enable it in team settings.</p>
+      )}
 
       <section className="home-stats-grid" aria-label="Your learning statistics">
         {[
@@ -229,7 +251,9 @@ function DashboardHome({ displayName, userId, preferredProgram, profileError }: 
             <div className="home-team-list">
               {data.teams.slice(0, 4).map((team) => (
                 <Link className="home-team-row" to={`/teams/${team.id}`} key={team.id}>
-                  <span className="home-team-icon"><Bot size={18} aria-hidden="true" /></span>
+                  <span className="home-team-icon">
+                    {team.logo_url ? <img src={team.logo_url} alt="" /> : <Bot size={18} aria-hidden="true" />}
+                  </span>
                   <span className="home-team-details"><strong>{team.name}</strong><span>Team {team.team_number} · {team.program}</span></span>
                   <ArrowRight size={15} aria-hidden="true" />
                 </Link>

@@ -20,6 +20,7 @@ export function TeamForm({ initialTeam, busy, submitLabel, onSubmit }: TeamFormP
       program: String(formData.get("program") ?? "FTC") as Program,
       description: String(formData.get("description") ?? "").trim(),
       visibility: String(formData.get("visibility") ?? "private") as TeamVisibility,
+      allow_student_quiz_creation: formData.get("allow_student_quiz_creation") === "on",
     });
   }
 
@@ -59,6 +60,15 @@ export function TeamForm({ initialTeam, busy, submitLabel, onSubmit }: TeamFormP
           <option value="public">Public — signed-in users can discover the team</option>
         </select>
       </label>
+      <label className="quiz-draft-toggle team-student-create-toggle">
+        <input
+          name="allow_student_quiz_creation"
+          type="checkbox"
+          defaultChecked={initialTeam?.allow_student_quiz_creation ?? false}
+        />
+        Allow students in this team to create quizzes
+      </label>
+      <p className="field-hint">This setting only controls student accounts. Owners, administrators, and coaches can always create quizzes.</p>
       <button className="button button-primary" type="submit" disabled={busy}>
         {busy ? "Saving…" : submitLabel} <span aria-hidden="true">→</span>
       </button>

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, CirclePlus, Search } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { listAccessibleQuizzes, type QuizListItem } from "../services/quizService";
+import { canCreateQuizzes } from "../services/teamService";
 
 export function QuizzesPage() {
   const { user } = useAuth();
@@ -12,9 +13,15 @@ export function QuizzesPage() {
   const [search, setSearch] = useState("");
   const [programFilter, setProgramFilter] = useState("all");
   const [showMyDrafts, setShowMyDrafts] = useState(true);
+  const [canCreate, setCanCreate] = useState(false);
+  const [permissionLoading, setPermissionLoading] = useState(true);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
+    setCanCreate(false);
+    setPermissionLoading(true);
+    setPermissionError(null);
     if (!user) return;
     void listAccessibleQuizzes(user.id).then((result) => {
       if (active) setQuizzes(result);
@@ -22,6 +29,13 @@ export function QuizzesPage() {
       if (active) setError(loadError instanceof Error ? loadError.message : "Could not load quizzes.");
     }).finally(() => {
       if (active) setLoading(false);
+    });
+    void canCreateQuizzes().then((allowed) => {
+      if (active) setCanCreate(allowed);
+    }).catch((permissionError: unknown) => {
+      if (active) setPermissionError(permissionError instanceof Error ? permissionError.message : "Could not check quiz-creation permission.");
+    }).finally(() => {
+      if (active) setPermissionLoading(false);
     });
     return () => { active = false; };
   }, [user]);
@@ -50,12 +64,18 @@ export function QuizzesPage() {
           <h1>Quiz library</h1>
           <p>Discover robotics knowledge checks, work through team assignments, or build a quiz of your own.</p>
         </div>
-        <Link className="button button-primary" to="/quizzes/create">
-          <CirclePlus size={16} aria-hidden="true" /> Create a quiz
-        </Link>
+        {!permissionLoading && canCreate && (
+          <Link className="button button-primary" to="/quizzes/create">
+            <CirclePlus size={16} aria-hidden="true" /> Create a quiz
+          </Link>
+        )}
       </header>
 
       {error && <p className="notice notice-error" role="alert">{error}</p>}
+      {permissionError && <p className="notice notice-error" role="alert">Quiz-creation access couldn’t be checked: {permissionError}</p>}
+      {!permissionLoading && !canCreate && !permissionError && (
+        <p className="home-permission-note">Quiz creation is disabled for your team. Ask a team owner or administrator to enable it in team settings.</p>
+      )}
 
       <div className="quiz-library-stats">
         <span><BookOpen size={16} aria-hidden="true" /> {quizzes.length} accessible quizzes</span>
@@ -135,9 +155,11 @@ export function QuizzesPage() {
           <p>
             {search || programFilter !== "all"
               ? "Try a different search or program."
-              : "Create the first quiz for your team, or ask a coach to assign one."}
+              : canCreate
+                ? "Create the first quiz for your team, or ask a coach to assign one."
+                : "Ask a team owner or administrator to enable quiz creation, or ask a coach to assign a quiz."}
           </p>
-          {!search && programFilter === "all" && (
+          {!search && programFilter === "all" && canCreate && (
             <Link className="button button-primary" to="/quizzes/create">Create a quiz</Link>
           )}
         </div>
