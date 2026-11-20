@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock3, Gamepad2, Heart, Star, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -142,9 +142,12 @@ export function QuizDetailPage() {
     <section className="public-profile-page quiz-detail-page">
       <Link className="back-link" to={quiz.visibility === "public" ? "/explore" : "/quizzes"}><ArrowLeft size={14} aria-hidden="true" /> Back to {quiz.visibility === "public" ? "quiz explorer" : "quiz library"}</Link>
       <article className="panel quiz-detail-card">
+        {quiz.cover_image_url && <img className="quiz-detail-cover" src={quiz.cover_image_url} alt="" />}
         <div className="quiz-card-topline">
           <span className="program-tag">{quiz.program}</span>
-          <span className={`quiz-status-badge quiz-status-${quiz.status}`}>{quiz.visibility === "public" ? "Public" : quiz.status === "draft" ? "Draft" : "Team / private"}</span>
+          <span className={`quiz-status-badge quiz-status-${quiz.status}`}>
+            {quiz.status === "draft" ? "Draft" : quiz.visibility === "public" ? "Public" : quiz.visibility === "team" ? "Team-only" : "Private"}
+          </span>
         </div>
         <span className="quiz-card-category">{quiz.category}</span>
         <h1>{quiz.title}</h1>
@@ -166,14 +169,22 @@ export function QuizDetailPage() {
           {quiz.associated_team && <span><Users size={14} aria-hidden="true" /> {quiz.associated_team}</span>}
           <span>Created {new Date(quiz.created_at).toLocaleDateString()}</span>
         </div>
+        {quiz.tags.length > 0 && (
+          <div className="quiz-detail-tags" aria-label="Quiz tags">
+            {quiz.tags.map((tag) => <span key={tag}>{tag}</span>)}
+          </div>
+        )}
         {error && <p className="notice notice-error" role="alert">{error}</p>}
         <div className="quiz-detail-actions">
-          {quiz.status === "published" && (
+          {quiz.status === "published" && (quiz.allow_multiple_attempts || personalAttemptCount === 0) && (
             user
               ? <button className="button button-primary" type="button" onClick={() => void handleStart()} disabled={actionBusy}>
                 {actionBusy ? "Starting quiz…" : "Start practice"} <ArrowRight size={16} aria-hidden="true" />
               </button>
               : <Link className="button button-primary" to={`/sign-in?next=${encodeURIComponent(`/quizzes/${quizId}`)}`}>Sign in to practice <ArrowRight size={16} aria-hidden="true" /></Link>
+          )}
+          {quiz.status === "published" && user && !quiz.allow_multiple_attempts && personalAttemptCount > 0 && (
+            <p className="quiz-attempt-limit" role="status">You have completed your one allowed attempt.</p>
           )}
           {quiz.status === "published" && user && (
             <button className="button button-secondary" type="button" onClick={() => void handleStartLiveGame()} disabled={actionBusy}>
@@ -207,7 +218,7 @@ export function QuizDetailPage() {
               </fieldset>
             ) : <Link className="quiz-rating-signin" to={`/sign-in?next=${encodeURIComponent(`/quizzes/${quizId}`)}`}>Sign in to rate this quiz</Link>
           )}
-          {quiz.is_creator && (
+          {quiz.is_editor && (
             <Link className="button button-secondary" to={`/quizzes/${quiz.quiz_id}/edit`}>Edit quiz</Link>
           )}
         </div>
@@ -219,6 +230,7 @@ export function QuizDetailPage() {
             </div>
             {preview.map((question) => (
               <article className="quiz-preview-question" key={question.question_position}>
+                {question.image_url && <img src={question.image_url} alt="" />}
                 <h3>{question.question_position}. {question.prompt}</h3>
                 <ul>{question.options.map((option, index) => <li key={index}>{option}</li>)}</ul>
               </article>
@@ -237,10 +249,45 @@ export function QuizTakePage() {
   const attemptId = new URLSearchParams(window.location.search).get("attempt") ?? "";
   const navigate = useNavigate();
   const [questions, setQuestions] = useState<QuizAttemptStart[]>([]);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [answers, setAnswers] = useState<Record<string, number | number[]>>({});
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const questionDeadlines = useRef(new Map<string, number>());
+  const currentQuestion = questions[currentQuestionIndex];
+
+  function isOptionSelected(questionId: string, optionIndex: number): boolean {
+    const answer = answers[questionId];
+    return Array.isArray(answer) ? answer.includes(optionIndex) : answer === optionIndex;
+  }
+
+  useEffect(() => {
+    if (!currentQuestion?.time_limit_seconds) {
+      setSecondsLeft(null);
+      return;
+    }
+
+    const deadline = questionDeadlines.current.get(currentQuestion.question_id)
+      ?? Date.now() + currentQuestion.time_limit_seconds * 1000;
+    questionDeadlines.current.set(currentQuestion.question_id, deadline);
+
+    const updateTimeLeft = () => {
+      const remaining = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setSecondsLeft(remaining);
+      if (remaining === 0) {
+        window.clearInterval(intervalId);
+        if (currentQuestionIndex < questions.length - 1) {
+          setCurrentQuestionIndex((index) => Math.min(index + 1, questions.length - 1));
+        }
+      }
+    };
+
+    const intervalId = window.setInterval(updateTimeLeft, 250);
+    updateTimeLeft();
+    return () => window.clearInterval(intervalId);
+  }, [currentQuestion, currentQuestionIndex, questions.length]);
 
   useEffect(() => {
     if (!attemptId) {
@@ -256,7 +303,10 @@ export function QuizTakePage() {
       if (!rows.length || rows.some((row) => row.quiz_id !== quizId || row.attempt_id !== attemptId)) {
         throw new Error("This quiz attempt does not match the selected quiz. Start a new attempt.");
       }
-      if (active) setQuestions(rows);
+      if (active) {
+        setCurrentQuestionIndex(0);
+        setQuestions(rows);
+      }
     } catch (loadError) {
       if (active) setError(loadError instanceof Error ? loadError.message : "Could not load this quiz attempt.");
     } finally {
@@ -268,10 +318,17 @@ export function QuizTakePage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!attemptId || !questions.length) return;
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((index) => index + 1);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      await submitQuizAttempt(attemptId, answers);
+      const completeAnswers = Object.fromEntries(
+        questions.map((question) => [question.question_id, answers[question.question_id] ?? null]),
+      );
+      await submitQuizAttempt(attemptId, completeAnswers);
       navigate(`/quizzes/${quizId}/results/${attemptId}`, { replace: true });
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : "Could not submit your answers.");
@@ -297,40 +354,77 @@ export function QuizTakePage() {
       <header className="page-heading">
         <span className="eyebrow"><span className="eyebrow-mark" /> Quiz practice</span>
         <h1>{questions[0].quiz_title}</h1>
-        <p>{questions.length} questions · Choose one answer for every question before submitting.</p>
+        <p>Question {currentQuestionIndex + 1} of {questions.length} · You can move on without answering.</p>
       </header>
       {error && <p className="notice notice-error" role="alert">{error}</p>}
       <form className="quiz-take-form" onSubmit={(event) => void handleSubmit(event)}>
-        {questions.map((question) => (
-          <fieldset className="panel question-take-card" key={question.question_id}>
+        {currentQuestion && (
+          <fieldset className="panel question-take-card" key={currentQuestion.question_id}>
             <legend>
-              <span className="question-number">Question {question.question_position} of {questions.length}</span>
-              <span className="question-prompt">{question.prompt}</span>
+              <span className="question-number">Question {currentQuestion.question_position} of {questions.length}</span>
+              <span className="question-prompt">{currentQuestion.prompt}</span>
             </legend>
+            <div className="quiz-question-facts">
+              <span>{currentQuestion.point_value} {currentQuestion.point_value === 1 ? "point" : "points"}</span>
+              {currentQuestion.time_limit_seconds !== null && (
+                <span className={secondsLeft === 0 ? "quiz-timer-expired" : ""} role="timer">
+                  {secondsLeft === 0 ? "Time expired" : `${secondsLeft ?? currentQuestion.time_limit_seconds} seconds left`}
+                </span>
+              )}
+              {currentQuestion.question_type === "multiple_select" && <span>Select all that apply</span>}
+            </div>
+            {currentQuestion.image_url && <img className="quiz-question-image" src={currentQuestion.image_url} alt="" />}
             <div className="quiz-answer-options">
-              {question.options.map((option, optionIndex) => (
+              {currentQuestion.options.map((option, optionIndex) => (
                 <label
-                  className={`quiz-answer-choice${answers[question.question_id] === optionIndex ? " is-selected" : ""}`}
+                  className={`quiz-answer-choice${isOptionSelected(currentQuestion.question_id, optionIndex) ? " is-selected" : ""}${secondsLeft === 0 ? " is-disabled" : ""}`}
                   key={optionIndex}
                 >
                   <input
-                    type="radio"
-                    name={question.question_id}
+                    type={currentQuestion.question_type === "multiple_select" ? "checkbox" : "radio"}
+                    name={currentQuestion.question_type === "multiple_select" ? `${currentQuestion.question_id}-${optionIndex}` : currentQuestion.question_id}
                     value={optionIndex}
-                    checked={answers[question.question_id] === optionIndex}
-                    onChange={() => setAnswers((existing) => ({ ...existing, [question.question_id]: optionIndex }))}
+                    checked={isOptionSelected(currentQuestion.question_id, optionIndex)}
+                    disabled={busy || secondsLeft === 0}
+                    onChange={(event) => setAnswers((existing) => {
+                      if (currentQuestion.question_type !== "multiple_select") {
+                        return { ...existing, [currentQuestion.question_id]: optionIndex };
+                      }
+                      const currentAnswer = existing[currentQuestion.question_id];
+                      const current = Array.isArray(currentAnswer) ? currentAnswer : [];
+                      const selected = event.target.checked
+                        ? [...current, optionIndex]
+                        : current.filter((index) => index !== optionIndex);
+                      if (selected.length === 0) {
+                        const { [currentQuestion.question_id]: _removed, ...remaining } = existing;
+                        return remaining;
+                      }
+                      return { ...existing, [currentQuestion.question_id]: selected.sort((a, b) => a - b) };
+                    })}
                   />
                   <span>{option}</span>
                 </label>
               ))}
             </div>
           </fieldset>
-        ))}
+        )}
         <div className="quiz-submit-row">
           <span>{Object.keys(answers).length} of {questions.length} answered</span>
-          <button className="button button-primary" type="submit" disabled={busy || Object.keys(answers).length !== questions.length}>
-            {busy ? "Submitting…" : "Submit answers"} <CheckCircle2 size={16} aria-hidden="true" />
-          </button>
+          <div className="quiz-question-navigation">
+            <button
+              className="button button-secondary"
+              type="button"
+              onClick={() => setCurrentQuestionIndex((index) => Math.max(0, index - 1))}
+              disabled={busy || currentQuestionIndex === 0}
+            ><ArrowLeft size={15} aria-hidden="true" /> Previous</button>
+            {currentQuestionIndex < questions.length - 1
+              ? <button className="button button-primary" type="submit" disabled={busy}>
+                Next <ArrowRight size={16} aria-hidden="true" />
+              </button>
+              : <button className="button button-primary" type="submit" disabled={busy}>
+                {busy ? "Submitting…" : "Finish quiz"} <CheckCircle2 size={16} aria-hidden="true" />
+              </button>}
+          </div>
         </div>
       </form>
     </section>
@@ -387,14 +481,23 @@ export function QuizResultsPage() {
 
       <div className="quiz-results-list">
         {rows.map((row) => (
-          <article className={`panel quiz-result-question${row.is_correct ? " is-correct" : " is-incorrect"}`} key={row.question_id}>
+          <article
+            className={`panel quiz-result-question${row.is_correct === null ? "" : row.is_correct ? " is-correct" : " is-incorrect"}`}
+            key={row.question_id}
+          >
             <span className="question-number">Question {row.question_position}</span>
             <h2>{row.prompt}</h2>
             <p className="quiz-selected-answer">
-              Your answer: {row.selected_option_index === null ? "Not answered" : row.options[row.selected_option_index]}
+              Your answer: {row.selected_option_indices?.length
+                ? row.selected_option_indices.map((index) => row.options[index]).join(", ")
+                : "Not answered"}
             </p>
-            {!row.is_correct && <p className="quiz-correct-answer">Correct answer: {row.options[row.correct_option_index]}</p>}
-            {row.explanation && <p className="quiz-answer-explanation">{row.explanation}</p>}
+            {row.show_correct_answers && !row.is_correct && row.correct_option_indices && (
+              <p className="quiz-correct-answer">
+                Correct answer: {row.correct_option_indices.map((index) => row.options[index]).join(", ")}
+              </p>
+            )}
+            {row.show_explanations && row.explanation && <p className="quiz-answer-explanation">{row.explanation}</p>}
           </article>
         ))}
       </div>

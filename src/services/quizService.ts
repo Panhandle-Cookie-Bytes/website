@@ -7,11 +7,12 @@ import type {
   QuizEditorData,
   QuizQuestionInput,
   QuizStatus,
+  QuizVisibility,
   TeamRole,
-  TeamVisibility,
 } from "../types/database";
+import { getQuizMediaUrls } from "./quizMediaService";
 
-const QUIZ_COLUMNS = "id,created_by,title,description,program,category,difficulty,visibility,status,allow_question_preview,created_at,updated_at";
+const QUIZ_COLUMNS = "id,created_by,title,description,program,category,difficulty,visibility,status,allow_question_preview,team_id,tags,cover_image_path,default_question_time_seconds,randomize_questions,randomize_answers,show_explanations,allow_multiple_attempts,show_correct_answers,allow_public_duplication,allow_team_editing,created_at,updated_at";
 const ASSIGNMENT_COLUMNS = "team_id,quiz_id,assigned_by,due_at,assigned_at";
 
 export interface QuizChanges {
@@ -20,9 +21,20 @@ export interface QuizChanges {
   program: Program;
   category: string;
   difficulty: Quiz["difficulty"];
-  visibility: TeamVisibility;
+  visibility: QuizVisibility;
   status: QuizStatus;
   allow_question_preview: boolean;
+  team_id: string | null;
+  tags: string[];
+  cover_image_path: string | null;
+  default_question_time_seconds: number;
+  randomize_questions: boolean;
+  randomize_answers: boolean;
+  show_explanations: boolean;
+  allow_multiple_attempts: boolean;
+  show_correct_answers: boolean;
+  allow_public_duplication: boolean;
+  allow_team_editing: boolean;
   questions: QuizQuestionInput[];
 }
 
@@ -167,38 +179,28 @@ export async function getQuizEditor(quizId: string): Promise<QuizEditorData> {
   if (error) throw error;
   const firstRow = data[0];
   if (!firstRow) throw new Error("This quiz could not be found or you do not have permission to edit it.");
+  const imageUrls = await getQuizMediaUrls(data.map((row) => row.image_path));
   return {
     quiz,
     questions: data.flatMap((row) => row.question_id && row.prompt && row.options && row.correct_option_index !== null
       ? [{
+        question_type: row.question_type ?? "multiple_choice",
         prompt: row.prompt,
         options: row.options,
         correct_index: row.correct_option_index,
+        correct_indices: row.correct_option_indices ?? [row.correct_option_index],
         explanation: row.explanation ?? "",
+        image_path: row.image_path,
+        image_url: row.image_path ? imageUrls.get(row.image_path) ?? null : null,
+        point_value: row.point_value ?? 1,
+        time_limit_seconds: row.time_limit_seconds,
       }]
       : []),
   };
 }
 
-export async function createQuiz(changes: QuizChanges): Promise<string> {
-  const { data, error } = await requireSupabase().rpc("create_quiz", {
-    _title: changes.title,
-    _description: changes.description,
-    _program: changes.program,
-    _category: changes.category,
-    _difficulty: changes.difficulty,
-    _visibility: changes.visibility,
-    _status: changes.status,
-    _allow_question_preview: changes.allow_question_preview,
-    _questions: changes.questions,
-  });
-  if (error) throw error;
-  if (!data) throw new Error("The quiz was saved without an ID. Check your quiz list before retrying.");
-  return data;
-}
-
-export async function updateQuiz(quizId: string, changes: QuizChanges): Promise<void> {
-  const { error } = await requireSupabase().rpc("update_quiz", {
+function quizRpcArguments(quizId: string, changes: QuizChanges) {
+  return {
     _quiz_id: quizId,
     _title: changes.title,
     _description: changes.description,
@@ -208,7 +210,33 @@ export async function updateQuiz(quizId: string, changes: QuizChanges): Promise<
     _visibility: changes.visibility,
     _status: changes.status,
     _allow_question_preview: changes.allow_question_preview,
+    _team_id: changes.team_id,
+    _tags: changes.tags,
+    _cover_image_path: changes.cover_image_path,
+    _default_question_time_seconds: changes.default_question_time_seconds,
+    _randomize_questions: changes.randomize_questions,
+    _randomize_answers: changes.randomize_answers,
+    _show_explanations: changes.show_explanations,
+    _allow_multiple_attempts: changes.allow_multiple_attempts,
+    _show_correct_answers: changes.show_correct_answers,
+    _allow_public_duplication: changes.allow_public_duplication,
+    _allow_team_editing: changes.allow_team_editing,
     _questions: changes.questions,
+  };
+}
+
+export async function createQuiz(changes: QuizChanges, quizId: string): Promise<string> {
+  const { data, error } = await requireSupabase().rpc("create_quiz", {
+    ...quizRpcArguments(quizId, changes),
+  });
+  if (error) throw error;
+  if (!data) throw new Error("The quiz was saved without an ID. Check your quiz list before retrying.");
+  return data;
+}
+
+export async function updateQuiz(quizId: string, changes: QuizChanges): Promise<void> {
+  const { error } = await requireSupabase().rpc("update_quiz", {
+    ...quizRpcArguments(quizId, changes),
   });
   if (error) throw error;
 }
@@ -217,10 +245,14 @@ export async function startQuizAttempt(quizId: string): Promise<QuizAttemptStart
   const { data, error } = await requireSupabase().rpc("start_quiz_attempt", { _quiz_id: quizId });
   if (error) throw error;
   if (!data.length) throw new Error("This quiz does not have any available questions.");
-  return data;
+  const imageUrls = await getQuizMediaUrls(data.map((question) => question.image_path));
+  return data.map((question) => ({
+    ...question,
+    image_url: question.image_path ? imageUrls.get(question.image_path) ?? null : null,
+  }));
 }
 
-export async function submitQuizAttempt(attemptId: string, answers: Record<string, number>) {
+export async function submitQuizAttempt(attemptId: string, answers: Record<string, number | number[] | null>) {
   const { data, error } = await requireSupabase().rpc("submit_quiz_attempt", {
     _attempt_id: attemptId,
     _answers: answers,
@@ -237,7 +269,11 @@ export async function getQuizAttemptResults(attemptId: string): Promise<QuizAtte
   });
   if (error) throw error;
   if (!data.length) throw new Error("Completed quiz results could not be found.");
-  return data;
+  const imageUrls = await getQuizMediaUrls(data.map((row) => row.image_path));
+  return data.map((row) => ({
+    ...row,
+    image_url: row.image_path ? imageUrls.get(row.image_path) ?? null : null,
+  }));
 }
 
 export async function listAssignableQuizzes(userId: string): Promise<Quiz[]> {
@@ -247,7 +283,9 @@ export async function listAssignableQuizzes(userId: string): Promise<Quiz[]> {
     .eq("status", "published")
     .order("title", { ascending: true });
   if (error) throw error;
-  return data.filter((quiz) => quiz.visibility === "public" || quiz.created_by === userId);
+  return data.filter((quiz) =>
+    quiz.visibility === "public"
+    || (quiz.created_by === userId && quiz.visibility !== "private"));
 }
 
 export async function assignQuizToTeam(teamId: string, quizId: string, dueAt: string | null): Promise<void> {

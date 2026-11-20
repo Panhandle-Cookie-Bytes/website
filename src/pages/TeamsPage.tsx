@@ -145,7 +145,7 @@ export function TeamJoinPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const queryCode = searchParams.get("code")?.trim().toLowerCase() ?? "";
+    const queryCode = searchParams.get("code")?.trim().toUpperCase() ?? "";
     setCode(queryCode);
     setPreview(null);
     setError(null);
@@ -165,7 +165,7 @@ export function TeamJoinPage() {
 
   function handleLookup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const normalizedCode = code.trim().toLowerCase();
+    const normalizedCode = code.trim().toUpperCase();
     setSearchParams(normalizedCode ? { code: normalizedCode } : {});
   }
 
@@ -174,7 +174,7 @@ export function TeamJoinPage() {
     setJoining(true);
     setError(null);
     try {
-      const teamId = await joinTeam(code.trim().toLowerCase());
+      const teamId = await joinTeam(code.trim().toUpperCase());
       navigate(`/teams/${teamId}`, { replace: true });
     } catch (joinError) {
       setError(joinError instanceof Error ? joinError.message : "Could not join this team.");
@@ -195,11 +195,11 @@ export function TeamJoinPage() {
             <span>Invitation code</span>
             <input
               value={code}
-              onChange={(event) => setCode(event.target.value)}
+              onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, ""))}
               autoComplete="off"
-              maxLength={32}
-              pattern="[A-Fa-f0-9]{32}"
-              placeholder="Paste your 32-character code"
+              maxLength={8}
+              pattern="[A-HJ-NP-Z2-9]{8}"
+              placeholder="Enter your 8-character code"
               required
             />
           </label>

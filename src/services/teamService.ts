@@ -199,7 +199,7 @@ export async function updateTeam(teamId: string, changes: TeamChanges): Promise<
 }
 
 export async function previewTeamInvitation(code: string): Promise<TeamInvitationPreview> {
-  const { data, error } = await requireSupabase().rpc("preview_team_invitation", { _code: code });
+  const { data, error } = await requireSupabase().rpc("preview_team_invitation", { _code: code.trim().toUpperCase() });
   if (error) throw error;
   const invitation = data[0];
   if (!invitation) throw new Error("This invitation is invalid, expired, or has been disabled.");
@@ -207,7 +207,7 @@ export async function previewTeamInvitation(code: string): Promise<TeamInvitatio
 }
 
 export async function joinTeam(code: string): Promise<string> {
-  const { data, error } = await requireSupabase().rpc("join_team_with_invitation", { _code: code });
+  const { data, error } = await requireSupabase().rpc("join_team_with_invitation", { _code: code.trim().toUpperCase() });
   if (error) throw error;
   if (!data) throw new Error("The invitation was accepted but no team was returned. Check My teams.");
   return data;

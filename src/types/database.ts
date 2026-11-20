@@ -9,6 +9,7 @@ export type Json =
 export type Program = "FLL" | "FTC" | "FRC" | "General FIRST";
 export type ProfileVisibility = "private" | "public";
 export type TeamVisibility = "private" | "public";
+export type QuizVisibility = "private" | "team" | "public";
 export type TeamRole = "owner" | "administrator" | "coach" | "student";
 
 export type Profile = {
@@ -83,9 +84,20 @@ export type Quiz = {
   program: Program;
   category: string;
   difficulty: QuizDifficulty;
-  visibility: TeamVisibility;
+  visibility: QuizVisibility;
   status: QuizStatus;
   allow_question_preview: boolean;
+  team_id: string | null;
+  tags: string[];
+  cover_image_path: string | null;
+  default_question_time_seconds: number;
+  randomize_questions: boolean;
+  randomize_answers: boolean;
+  show_explanations: boolean;
+  allow_multiple_attempts: boolean;
+  show_correct_answers: boolean;
+  allow_public_duplication: boolean;
+  allow_team_editing: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -112,18 +124,32 @@ export type QuizExplorerRow = {
 };
 
 export type QuizDetailData = QuizExplorerRow & {
-  visibility: TeamVisibility;
+  visibility: QuizVisibility;
   status: QuizStatus;
   allow_question_preview: boolean;
+  allow_multiple_attempts: boolean;
   is_favorited: boolean;
   my_rating: number | null;
   is_creator: boolean;
+  is_editor: boolean;
+  tags: string[];
+  cover_image_path: string | null;
+  cover_image_url: string | null;
 };
+
+export type QuizQuestionType =
+  | "multiple_choice"
+  | "true_false"
+  | "multiple_select"
+  | "image_multiple_choice";
 
 export type QuizQuestionPreview = {
   question_position: number;
   prompt: string;
   options: string[];
+  image_path: string | null;
+  image_url: string | null;
+  question_type: QuizQuestionType;
 };
 
 export type QuizQuestion = {
@@ -133,15 +159,26 @@ export type QuizQuestion = {
   prompt: string;
   options: string[];
   correct_option_index: number;
+  question_type: QuizQuestionType;
+  correct_option_indices: number[];
+  image_path: string | null;
+  point_value: number;
+  time_limit_seconds: number | null;
   explanation: string;
   created_at: string;
 };
 
 export type QuizQuestionInput = {
+  question_type: QuizQuestionType;
   prompt: string;
   options: string[];
   correct_index: number;
+  correct_indices: number[];
   explanation: string;
+  image_path: string | null;
+  image_url?: string | null;
+  point_value: number;
+  time_limit_seconds: number | null;
 };
 
 export type QuizEditorData = {
@@ -154,6 +191,13 @@ export type QuizAttemptQuestion = {
   question_position: number;
   prompt: string;
   options: string[];
+  question_type: QuizQuestionType;
+  image_path: string | null;
+  image_url: string | null;
+  point_value: number;
+  time_limit_seconds: number | null;
+  show_explanations: boolean;
+  show_correct_answers: boolean;
 };
 
 export type QuizAttemptStart = {
@@ -164,6 +208,13 @@ export type QuizAttemptStart = {
   question_position: number;
   prompt: string;
   options: string[];
+  question_type: QuizQuestionType;
+  image_path: string | null;
+  image_url: string | null;
+  point_value: number;
+  time_limit_seconds: number | null;
+  show_explanations: boolean;
+  show_correct_answers: boolean;
 };
 
 export type QuizAttemptResultRow = {
@@ -178,9 +229,17 @@ export type QuizAttemptResultRow = {
   prompt: string;
   options: string[];
   selected_option_index: number | null;
-  correct_option_index: number;
+  correct_option_index: number | null;
   is_correct: boolean | null;
   explanation: string;
+  question_type: QuizQuestionType;
+  selected_option_indices: number[] | null;
+  correct_option_indices: number[] | null;
+  image_path: string | null;
+  image_url: string | null;
+  point_value: number;
+  show_correct_answers: boolean;
+  show_explanations: boolean;
 };
 
 export type TeamQuizAssignment = {
@@ -311,9 +370,20 @@ export interface Database {
           program: Program;
           category: string;
           difficulty?: QuizDifficulty;
-          visibility?: TeamVisibility;
+          visibility?: QuizVisibility;
           status?: QuizStatus;
           allow_question_preview?: boolean;
+          team_id?: string | null;
+          tags?: string[];
+          cover_image_path?: string | null;
+          default_question_time_seconds?: number;
+          randomize_questions?: boolean;
+          randomize_answers?: boolean;
+          show_explanations?: boolean;
+          allow_multiple_attempts?: boolean;
+          show_correct_answers?: boolean;
+          allow_public_duplication?: boolean;
+          allow_team_editing?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -323,9 +393,20 @@ export interface Database {
           program?: Program;
           category?: string;
           difficulty?: QuizDifficulty;
-          visibility?: TeamVisibility;
+          visibility?: QuizVisibility;
           status?: QuizStatus;
           allow_question_preview?: boolean;
+          team_id?: string | null;
+          tags?: string[];
+          cover_image_path?: string | null;
+          default_question_time_seconds?: number;
+          randomize_questions?: boolean;
+          randomize_answers?: boolean;
+          show_explanations?: boolean;
+          allow_multiple_attempts?: boolean;
+          show_correct_answers?: boolean;
+          allow_public_duplication?: boolean;
+          allow_team_editing?: boolean;
           updated_at?: string;
         };
         Relationships: [];
@@ -339,6 +420,11 @@ export interface Database {
           prompt: string;
           options: string[];
           correct_option_index: number;
+          question_type?: QuizQuestionType;
+          correct_option_indices?: number[];
+          image_path?: string | null;
+          point_value?: number;
+          time_limit_seconds?: number | null;
           explanation?: string;
           created_at?: string;
         };
@@ -347,6 +433,11 @@ export interface Database {
           prompt?: string;
           options?: string[];
           correct_option_index?: number;
+          question_type?: QuizQuestionType;
+          correct_option_indices?: number[];
+          image_path?: string | null;
+          point_value?: number;
+          time_limit_seconds?: number | null;
           explanation?: string;
         };
         Relationships: [];
@@ -377,6 +468,9 @@ export interface Database {
           score: number | null;
           correct_count: number | null;
           total_questions: number;
+          quiz_title_snapshot: string;
+          show_explanations: boolean;
+          show_correct_answers: boolean;
         };
         Insert: {
           id?: string;
@@ -386,6 +480,9 @@ export interface Database {
           finished_at?: string | null;
           score?: number | null;
           correct_count?: number | null;
+          show_explanations?: boolean;
+          show_correct_answers?: boolean;
+          quiz_title_snapshot: string;
           total_questions: number;
         };
         Update: {
@@ -399,13 +496,15 @@ export interface Database {
         Row: {
           attempt_id: string;
           question_id: string;
-          selected_option_index: number;
+          selected_option_index: number | null;
+          selected_option_indices: number[];
           is_correct: boolean;
         };
         Insert: {
           attempt_id: string;
           question_id: string;
-          selected_option_index: number;
+          selected_option_index: number | null;
+          selected_option_indices: number[];
           is_correct: boolean;
         };
         Update: Record<string, never>;
@@ -508,14 +607,26 @@ export interface Database {
       };
       create_quiz: {
         Args: {
+          _quiz_id: string;
           _title: string;
           _description: string;
           _program: Program;
           _category: string;
-          _visibility: TeamVisibility;
+          _visibility: QuizVisibility;
           _status: QuizStatus;
           _difficulty: QuizDifficulty;
           _allow_question_preview: boolean;
+          _team_id: string | null;
+          _tags: string[];
+          _cover_image_path: string | null;
+          _default_question_time_seconds: number;
+          _randomize_questions: boolean;
+          _randomize_answers: boolean;
+          _show_explanations: boolean;
+          _allow_multiple_attempts: boolean;
+          _show_correct_answers: boolean;
+          _allow_public_duplication: boolean;
+          _allow_team_editing: boolean;
           _questions: Json;
         };
         Returns: string;
@@ -527,10 +638,21 @@ export interface Database {
           _description: string;
           _program: Program;
           _category: string;
-          _visibility: TeamVisibility;
+          _visibility: QuizVisibility;
           _status: QuizStatus;
           _difficulty: QuizDifficulty;
           _allow_question_preview: boolean;
+          _team_id: string | null;
+          _tags: string[];
+          _cover_image_path: string | null;
+          _default_question_time_seconds: number;
+          _randomize_questions: boolean;
+          _randomize_answers: boolean;
+          _show_explanations: boolean;
+          _allow_multiple_attempts: boolean;
+          _show_correct_answers: boolean;
+          _allow_public_duplication: boolean;
+          _allow_team_editing: boolean;
           _questions: Json;
         };
         Returns: undefined;
@@ -551,6 +673,11 @@ export interface Database {
           options: string[] | null;
           correct_option_index: number | null;
           explanation: string | null;
+          question_type: QuizQuestionType | null;
+          correct_option_indices: number[] | null;
+          image_path: string | null;
+          point_value: number | null;
+          time_limit_seconds: number | null;
         }[];
       };
       start_quiz_attempt: {
@@ -587,7 +714,7 @@ export interface Database {
           description: string;
           program: Program;
           category: string;
-          visibility: TeamVisibility;
+          visibility: QuizVisibility;
           status: QuizStatus;
           created_at: string;
           updated_at: string;

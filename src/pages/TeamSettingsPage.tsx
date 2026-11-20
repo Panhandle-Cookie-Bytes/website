@@ -299,8 +299,8 @@ export function TeamSettingsPage() {
           </div>
           <p className="panel-description">
             {activeInvitations.length
-              ? "Generating a new invitation replaces the active code for that role. Student and coach codes can both remain active. Each code is stored securely and shown only once."
-              : "Create a secure invitation link for a student or coach. The code is stored securely and shown only once."}
+              ? "Generating a new invitation replaces the active code for that role. Student and coach codes can both remain active. Each 8-character code is stored securely and shown only once."
+              : "Create an 8-character invitation code for a student or coach. The code is stored securely and shown only once."}
           </p>
           <form className="form-stack invitation-form" onSubmit={(event) => void handleCreateInvitation(event)}>
             <div className="form-row">

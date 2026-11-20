@@ -1,6 +1,6 @@
 # Robotics Quizzes
 
-A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds a personalized homepage dashboard. Phase 5 adds hosted live quiz rooms with synchronized questions, timed scoring, and results. Phase 6 adds team logos, configurable student quiz creation, team activity, statistics, and leaderboards. Phase 7 adds public quiz discovery, ratings, favorites, and safe question previews.
+A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds a personalized homepage dashboard. Phase 5 adds hosted live quiz rooms with synchronized questions, timed scoring, and results. Phase 6 adds team logos, configurable student quiz creation, team activity, statistics, and leaderboards. Phase 7 adds public quiz discovery, ratings, favorites, and safe question previews. Phase 8 adds a complete quiz workshop, four question types, media, configurable play settings, and immutable attempt snapshots.
 
 ## Stack and theme
 
@@ -42,6 +42,7 @@ In the Supabase project, open **SQL Editor** and run these files in order:
 5. [`supabase/migrations/20261116010000_phase5_live_games.sql`](./supabase/migrations/20261116010000_phase5_live_games.sql) — creates live game rooms, secure join codes, server-side question snapshots and scoring, protected game RPCs, and adds safe room state to Supabase Realtime.
 6. [`supabase/migrations/20261117000000_phase6_team_management.sql`](./supabase/migrations/20261117000000_phase6_team_management.sql) — adds team quiz-creation settings, team dashboard statistics/activity/leaderboard RPCs, private team-logo storage, and migrates live-game join codes to 8 characters.
 7. [`supabase/migrations/20261119000000_phase7_quiz_explorer.sql`](./supabase/migrations/20261119000000_phase7_quiz_explorer.sql) — adds quiz difficulty and preview settings, public explorer/detail/preview RPCs, category normalization, favorites, and ratings.
+8. [`supabase/migrations/20261120000000_phase8_quiz_creation.sql`](./supabase/migrations/20261120000000_phase8_quiz_creation.sql) — adds private quiz-media storage, team-only quiz access, tags and quiz settings, four question types, per-attempt snapshots, and 8-character team invitations.
 
 If earlier migrations have already been applied, run only the migrations you have not applied yet. Do not skip Phase 2; Phase 3 and Phase 4 depend on its team tables and access helpers.
 
@@ -103,7 +104,7 @@ Players must sign in and have access to the selected quiz. Public quizzes are jo
 
 The migration adds `live_games` to Supabase Realtime when the standard `supabase_realtime` publication exists. If Realtime is unavailable in a project, room actions still work through the database; use the in-room Refresh message to check state while correcting the project’s Realtime configuration.
 
-The code uses an unambiguous alphabet (`A-H`, `J-N`, `P-Z`, and `2-9`). Applying Phase 6 replaces codes on existing rooms; hosts can see the new code from the game lobby. Team invitation codes remain 32-character codes and are not changed by this migration.
+Live-game and team invitation codes use the unambiguous alphabet (`A-H`, `J-N`, `P-Z`, and `2-9`) and are 8 characters long. Applying Phase 6 replaces codes on existing rooms; hosts can see the new code from the game lobby. Phase 8 deactivates older 32-character team invitation codes because their original values are only stored as hashes; coaches should generate fresh invitations after applying it.
 
 To add creator information, edit `creators` in [`src/content/about.ts`](./src/content/about.ts). Add an object with `name`, `role`, and `bio`; `link` is optional. Creator information is intentionally kept in one file, and no names or bios are fabricated.
 
@@ -120,13 +121,13 @@ The creator is the team owner. Owners can appoint administrators; owners and adm
 
 - `/explore` — browse published public quizzes, filter by program, category, and difficulty, and sort by popularity, rating, recency, plays, or length.
 - `/quizzes` — discover public and assigned quizzes, view your own drafts, and see your quiz activity.
-- `/quizzes/create` — write a multiple-choice quiz and save it as a draft or publish it.
+- `/quizzes/create` — build a quiz with title, description, FIRST program, category, difficulty, cover art, tags, visibility, team association, and authoring settings.
 - `/quizzes/:quizId` — view details and start or repeat a quiz.
 - `/quizzes/:quizId/edit` — edit a quiz you created.
 - `/quizzes/:quizId/take` — answer and submit a quiz.
 - `/quizzes/:quizId/results/:attemptId` — see your score, selected answers, correct answers, and explanations.
 
-Quizzes support up to 50 questions and 2–6 answer choices per question. Authors select a FIRST program, category, and difficulty; they may allow a preview of up to five questions on public quiz pages. The public explorer shows only published public quizzes. Quiz cards and details display creator attribution (respecting profile visibility), public associated teams, question count, estimated time (one minute per question), plays, favorites, and community ratings. Signed-in users can save quizzes and rate public quizzes from one to five stars. Correct answers and explanations are never returned by public quiz details or preview functions. Drafts are private to their creator. Published quizzes may be public or private; coaches can assign public quizzes or published quizzes they created to their team, with an optional due date. A quiz with existing attempts cannot have its question set changed. Unassign it before changing it back to draft.
+Quizzes support up to 50 questions and 2–6 answer choices per question: multiple choice, true/false, multiple select, and image-based multiple choice. Authors can add images, explanations, point values, optional per-question countdowns, reorder or duplicate questions, preview them, and save drafts or publish. Timed-out questions lock and may be left unanswered; the practice countdown runs in the browser and is not a proctoring control. Private quizzes are creator-only; team quizzes are visible to their associated team; public quizzes can be discovered. Team coaches and administrators can edit a team quiz when the author enables it. Quiz settings include default question time, randomized question/answer order, explanation and answer-key visibility, repeat attempts, and public duplication. Quiz media is stored in a private bucket with quiz/team access checks. Each attempt captures its own immutable question, choice, image, and answer-key snapshot, so later edits do not change completed results. The public explorer shows only published public quizzes; answer keys are never returned by public detail or preview functions.
 
 Correct answers are not readable through the normal quiz/question APIs or sent to the browser before submission. Supabase functions validate submissions and calculate scores; completed result data is only available to the attempt’s owner.
 
@@ -176,6 +177,16 @@ Correct answers are not readable through the normal quiz/question APIs or sent t
 6. Confirm drafts remain available to their creator in the signed-in quiz library and can still be opened and edited from their details page.
 7. Test the explorer and details page on desktop and a narrow mobile viewport.
 
+## Test Phase 8
+
+1. Apply the Phase 8 migration after Phases 1–7. Generate new team invitation codes and replace any old invitation links; old 32-character codes are deactivated.
+2. Create and edit draft quizzes with each question type. Verify multiple-select scoring requires the exact correct set, true/false choices stay fixed, and image-based questions require an image.
+3. Upload and remove cover and question images. Confirm previews and practice show images only to users allowed to access the quiz.
+4. Configure tags, team association, all visibility levels, question time and points, randomization, explanation/answer visibility, retry permissions, duplication, and team editing. Confirm quiz access and editing permissions match these choices.
+5. Complete an attempt, then edit the quiz content and settings. Confirm the old result still shows the questions and answers from that attempt.
+6. Drag and drop questions, use the up/down controls, duplicate and delete questions, preview the learner view, save a draft, and reload after unsaved changes to verify the warning.
+7. Test editor, image upload, private/team/public access, invitation entry, practice, and historical results on desktop and a narrow mobile viewport.
+
 Run local code checks:
 
 ```sh
@@ -184,4 +195,4 @@ npm run build
 npm run preview
 ```
 
-The footer version is `0:02:7`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
+The footer version is `0:02:8`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
