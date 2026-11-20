@@ -1,7 +1,7 @@
 import { requireSupabase } from "../lib/supabase";
 import type { Program, Quiz } from "../types/database";
 
-export interface PopularQuiz extends Omit<Quiz, "created_by"> {
+export interface PopularQuiz extends Omit<Quiz, "created_by" | "difficulty" | "allow_question_preview"> {
   attempt_count: number;
 }
 

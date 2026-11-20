@@ -1,50 +1,79 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, CheckCircle2, Clock3, Gamepad2, Heart, Star, Users } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  getQuiz,
   getQuizAttemptResults,
   listQuizAttempts,
   startQuizAttempt,
   submitQuizAttempt,
 } from "../services/quizService";
-import type { Quiz, QuizAttemptResultRow, QuizAttemptStart } from "../types/database";
+import { createLiveGame } from "../services/liveGameService";
+import {
+  getPublicQuizDetail,
+  getPublicQuizQuestionPreview,
+  ratePublicQuiz,
+  setQuizFavorite,
+} from "../services/quizExplorerService";
+import type { QuizAttemptResultRow, QuizAttemptStart, QuizDetailData, QuizQuestionPreview } from "../types/database";
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return fallback;
+}
 
 export function QuizDetailPage() {
   const { quizId = "" } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [attemptCount, setAttemptCount] = useState(0);
+  const [quiz, setQuiz] = useState<QuizDetailData | null>(null);
+  const [preview, setPreview] = useState<QuizQuestionPreview[]>([]);
+  const [personalAttemptCount, setPersonalAttemptCount] = useState(0);
   const [bestScore, setBestScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setError(null);
+    setQuiz(null);
+    setPreview([]);
+    setPersonalAttemptCount(0);
+    setBestScore(null);
     void Promise.all([
-      getQuiz(quizId),
+      getPublicQuizDetail(quizId),
       user ? listQuizAttempts(quizId, user.id) : Promise.resolve([]),
-    ]).then(([quizResult, attemptsResult]) => {
+    ]).then(async ([quizResult, attemptsResult]) => {
+      const questionPreview = quizResult.visibility === "public" && quizResult.allow_question_preview
+        ? await getPublicQuizQuestionPreview(quizId)
+        : [];
       if (!active) return;
       setQuiz(quizResult);
+      setPreview(questionPreview);
       const completed = attemptsResult.filter(({ finished_at }) => finished_at !== null);
-      setAttemptCount(completed.length);
+      setPersonalAttemptCount(completed.length);
       const scores = completed.flatMap(({ score }) => score === null ? [] : [score]);
       setBestScore(scores.length ? Math.max(...scores) : null);
     }).catch((loadError: unknown) => {
-      if (active) setError(loadError instanceof Error ? loadError.message : "Could not load this quiz.");
+      if (active) setError(getErrorMessage(loadError, "Could not load this quiz."));
     }).finally(() => {
       if (active) setLoading(false);
     });
     return () => { active = false; };
   }, [quizId, user]);
 
+  async function refreshQuiz() {
+    const updatedQuiz = await getPublicQuizDetail(quizId);
+    setQuiz(updatedQuiz);
+  }
+
   async function handleStart() {
-    setBusy(true);
+    setActionBusy(true);
     setError(null);
     try {
       const questions = await startQuizAttempt(quizId);
@@ -53,8 +82,47 @@ export function QuizDetailPage() {
       window.sessionStorage.setItem(`quiz-attempt:${firstQuestion.attempt_id}`, JSON.stringify(questions));
       navigate(`/quizzes/${quizId}/take?attempt=${firstQuestion.attempt_id}`);
     } catch (startError) {
-      setError(startError instanceof Error ? startError.message : "Could not start this quiz.");
-      setBusy(false);
+      setError(getErrorMessage(startError, "Could not start this quiz."));
+      setActionBusy(false);
+    }
+  }
+
+  async function handleStartLiveGame() {
+    setActionBusy(true);
+    setError(null);
+    try {
+      const { gameId } = await createLiveGame(quizId);
+      navigate(`/games/${gameId}`);
+    } catch (startError) {
+      setError(getErrorMessage(startError, "Could not create a live game."));
+      setActionBusy(false);
+    }
+  }
+
+  async function handleFavorite() {
+    if (!quiz) return;
+    setActionBusy(true);
+    setError(null);
+    try {
+      await setQuizFavorite(quizId, !quiz.is_favorited);
+      await refreshQuiz();
+    } catch (favoriteError) {
+      setError(getErrorMessage(favoriteError, "Could not update your favorites."));
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function handleRate(rating: number) {
+    setActionBusy(true);
+    setError(null);
+    try {
+      await ratePublicQuiz(quizId, rating);
+      await refreshQuiz();
+    } catch (ratingError) {
+      setError(getErrorMessage(ratingError, "Could not save your rating."));
+    } finally {
+      setActionBusy(false);
     }
   }
 
@@ -65,39 +133,99 @@ export function QuizDetailPage() {
         <span className="eyebrow"><span className="eyebrow-mark" /> Quiz unavailable</span>
         <h1>We can’t open this quiz.</h1>
         <p role="alert">{error ?? "It may be private, a draft, or assigned to another team."}</p>
-        <Link className="button button-primary" to="/quizzes">Back to quiz library</Link>
+        <Link className="button button-primary" to="/explore">Explore public quizzes</Link>
       </section>
     );
   }
 
   return (
     <section className="public-profile-page quiz-detail-page">
-      <Link className="back-link" to="/quizzes"><ArrowLeft size={14} aria-hidden="true" /> Back to quiz library</Link>
+      <Link className="back-link" to={quiz.visibility === "public" ? "/explore" : "/quizzes"}><ArrowLeft size={14} aria-hidden="true" /> Back to {quiz.visibility === "public" ? "quiz explorer" : "quiz library"}</Link>
       <article className="panel quiz-detail-card">
         <div className="quiz-card-topline">
           <span className="program-tag">{quiz.program}</span>
-          <span className={`quiz-status-badge quiz-status-${quiz.status}`}>{quiz.status}</span>
+          <span className={`quiz-status-badge quiz-status-${quiz.status}`}>{quiz.visibility === "public" ? "Public" : quiz.status === "draft" ? "Draft" : "Team / private"}</span>
         </div>
         <span className="quiz-card-category">{quiz.category}</span>
         <h1>{quiz.title}</h1>
         <p className="quiz-detail-description">{quiz.description || "A focused multiple-choice knowledge check."}</p>
         <div className="quiz-detail-facts">
-          <span><BookOpen size={16} aria-hidden="true" /> Multiple-choice questions</span>
-          <span>{quiz.visibility === "public" ? "Public quiz" : "Private or team assignment"}</span>
-          {attemptCount > 0 && <span>{attemptCount} completed attempt{attemptCount === 1 ? "" : "s"}</span>}
+          <span>{quiz.difficulty} difficulty</span>
+          <span><BookOpen size={16} aria-hidden="true" /> {quiz.question_count} questions</span>
+          <span><Clock3 size={16} aria-hidden="true" /> About {quiz.estimated_minutes} min</span>
+          <span>{quiz.play_count} {quiz.play_count === 1 ? "play" : "plays"}</span>
+          <span><Star size={16} aria-hidden="true" /> {quiz.average_rating === null ? "Not rated" : `${quiz.average_rating} / 5`}{quiz.rating_count ? ` · ${quiz.rating_count}` : ""}</span>
+          <span><Heart size={16} aria-hidden="true" /> {quiz.favorite_count} saved</span>
           {bestScore !== null && <span>Best score: {bestScore}%</span>}
+          {user && personalAttemptCount > 0 && <span>Your completed attempts: {personalAttemptCount}</span>}
+        </div>
+        <div className="quiz-detail-attribution">
+          <span>Created by {quiz.creator_username
+            ? <Link to={`/users/${quiz.creator_username}`}>{quiz.creator_display_name}</Link>
+            : quiz.creator_display_name}</span>
+          {quiz.associated_team && <span><Users size={14} aria-hidden="true" /> {quiz.associated_team}</span>}
+          <span>Created {new Date(quiz.created_at).toLocaleDateString()}</span>
         </div>
         {error && <p className="notice notice-error" role="alert">{error}</p>}
         <div className="quiz-detail-actions">
           {quiz.status === "published" && (
-            <button className="button button-primary" type="button" onClick={() => void handleStart()} disabled={busy}>
-              {busy ? "Starting quiz…" : attemptCount ? "Practice again" : "Start quiz"} <ArrowRight size={16} aria-hidden="true" />
+            user
+              ? <button className="button button-primary" type="button" onClick={() => void handleStart()} disabled={actionBusy}>
+                {actionBusy ? "Starting quiz…" : "Start practice"} <ArrowRight size={16} aria-hidden="true" />
+              </button>
+              : <Link className="button button-primary" to={`/sign-in?next=${encodeURIComponent(`/quizzes/${quizId}`)}`}>Sign in to practice <ArrowRight size={16} aria-hidden="true" /></Link>
+          )}
+          {quiz.status === "published" && user && (
+            <button className="button button-secondary" type="button" onClick={() => void handleStartLiveGame()} disabled={actionBusy}>
+              <Gamepad2 size={16} aria-hidden="true" /> Start live game
             </button>
           )}
-          {quiz.created_by === user?.id && (
-            <Link className="button button-secondary" to={`/quizzes/${quiz.id}/edit`}>Edit quiz</Link>
+          {quiz.status === "published" && user ? (
+            <button className="button button-secondary" type="button" onClick={() => void handleFavorite()} disabled={actionBusy}>
+              <Heart size={16} fill={quiz.is_favorited ? "currentColor" : "none"} aria-hidden="true" />
+              {quiz.is_favorited ? "Saved to favorites" : "Save to favorites"}
+            </button>
+          ) : quiz.status === "published" ? (
+            <Link className="button button-secondary" to={`/sign-in?next=${encodeURIComponent(`/quizzes/${quizId}`)}`}>Sign in to save</Link>
+          ) : null}
+          {quiz.visibility === "public" && quiz.status === "published" && (
+            user ? (
+              <fieldset className="quiz-rating-control" disabled={actionBusy}>
+                <legend>{quiz.my_rating ? "Your rating" : "Rate this quiz"}</legend>
+                <div role="group" aria-label="Rate quiz from 1 to 5 stars">
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      className="quiz-rating-star"
+                      key={rating}
+                      type="button"
+                      aria-label={`${rating} out of 5 stars`}
+                      aria-pressed={quiz.my_rating === rating}
+                      onClick={() => void handleRate(rating)}
+                    ><Star size={18} fill={(quiz.my_rating ?? 0) >= rating ? "currentColor" : "none"} aria-hidden="true" /></button>
+                  ))}
+                </div>
+              </fieldset>
+            ) : <Link className="quiz-rating-signin" to={`/sign-in?next=${encodeURIComponent(`/quizzes/${quizId}`)}`}>Sign in to rate this quiz</Link>
+          )}
+          {quiz.is_creator && (
+            <Link className="button button-secondary" to={`/quizzes/${quiz.quiz_id}/edit`}>Edit quiz</Link>
           )}
         </div>
+        {preview.length > 0 && (
+          <section className="quiz-question-preview">
+            <div className="quiz-section-heading">
+              <div><span className="eyebrow">Creator-enabled preview</span><h2>Preview questions</h2></div>
+              <span className="team-count">{preview.length}</span>
+            </div>
+            {preview.map((question) => (
+              <article className="quiz-preview-question" key={question.question_position}>
+                <h3>{question.question_position}. {question.prompt}</h3>
+                <ul>{question.options.map((option, index) => <li key={index}>{option}</li>)}</ul>
+              </article>
+            ))}
+            <p className="quiz-preview-note">Answer keys and explanations are hidden in the preview.</p>
+          </section>
+        )}
       </article>
     </section>
   );

@@ -11,7 +11,7 @@ import type {
   TeamVisibility,
 } from "../types/database";
 
-const QUIZ_COLUMNS = "id,created_by,title,description,program,category,visibility,status,created_at,updated_at";
+const QUIZ_COLUMNS = "id,created_by,title,description,program,category,difficulty,visibility,status,allow_question_preview,created_at,updated_at";
 const ASSIGNMENT_COLUMNS = "team_id,quiz_id,assigned_by,due_at,assigned_at";
 
 export interface QuizChanges {
@@ -19,8 +19,10 @@ export interface QuizChanges {
   description: string;
   program: Program;
   category: string;
+  difficulty: Quiz["difficulty"];
   visibility: TeamVisibility;
   status: QuizStatus;
+  allow_question_preview: boolean;
   questions: QuizQuestionInput[];
 }
 
@@ -184,8 +186,10 @@ export async function createQuiz(changes: QuizChanges): Promise<string> {
     _description: changes.description,
     _program: changes.program,
     _category: changes.category,
+    _difficulty: changes.difficulty,
     _visibility: changes.visibility,
     _status: changes.status,
+    _allow_question_preview: changes.allow_question_preview,
     _questions: changes.questions,
   });
   if (error) throw error;
@@ -200,8 +204,10 @@ export async function updateQuiz(quizId: string, changes: QuizChanges): Promise<
     _description: changes.description,
     _program: changes.program,
     _category: changes.category,
+    _difficulty: changes.difficulty,
     _visibility: changes.visibility,
     _status: changes.status,
+    _allow_question_preview: changes.allow_question_preview,
     _questions: changes.questions,
   });
   if (error) throw error;

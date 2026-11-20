@@ -3,7 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
-const APP_VERSION = "0:02:6";
+const APP_VERSION = "0:02:7";
 
 export function SiteLayout() {
   const { user, profile, signOut } = useAuth();
@@ -51,10 +51,11 @@ export function SiteLayout() {
             aria-label="Main navigation"
           >
             <NavLink to="/" end onClick={closeMenu}>Home</NavLink>
+            <NavLink to="/explore" onClick={closeMenu}>Explore quizzes</NavLink>
             <NavLink to="/about" onClick={closeMenu}>About us</NavLink>
             {user ? (
               <>
-                <NavLink to="/quizzes" onClick={closeMenu}>Quizzes</NavLink>
+                <NavLink to="/quizzes" onClick={closeMenu}>My quizzes</NavLink>
                 <NavLink to="/games" onClick={closeMenu}>Live games</NavLink>
                 <NavLink to="/teams" onClick={closeMenu}>My teams</NavLink>
                 <NavLink to="/profile" onClick={closeMenu}>Profile</NavLink>

@@ -93,7 +93,7 @@ function PopularQuizCards({ quizzes, loading, error }: {
           <h2>Popular quizzes</h2>
           <p>Real public quizzes, ranked by completed attempts.</p>
         </div>
-        <Link className="text-link" to="/sign-up">Join to explore <ArrowRight size={16} aria-hidden="true" /></Link>
+        <Link className="text-link" to="/explore">Explore all quizzes <ArrowRight size={16} aria-hidden="true" /></Link>
       </div>
       {error && <p className="notice notice-error" role="alert">Public quizzes couldn’t load: {error}</p>}
       {loading ? (
@@ -106,11 +106,11 @@ function PopularQuizCards({ quizzes, loading, error }: {
                 <span className="program-tag">{quiz.program}</span>
                 <span className="quiz-card-category">{quiz.category}</span>
               </div>
-              <h3>{quiz.title}</h3>
+              <h3><Link to={`/quizzes/${quiz.id}`}>{quiz.title}</Link></h3>
               <p>{quiz.description || "A community quiz for robotics learners."}</p>
               <div className="quiz-card-meta">
                 <span>{quiz.attempt_count} completed {quiz.attempt_count === 1 ? "attempt" : "attempts"}</span>
-                <Link className="text-link" to="/sign-up">Practice <ArrowRight size={14} aria-hidden="true" /></Link>
+                <Link className="text-link" to={`/quizzes/${quiz.id}`}>View quiz <ArrowRight size={14} aria-hidden="true" /></Link>
               </div>
             </article>
           ))}

@@ -82,10 +82,48 @@ export type Quiz = {
   description: string;
   program: Program;
   category: string;
+  difficulty: QuizDifficulty;
   visibility: TeamVisibility;
   status: QuizStatus;
+  allow_question_preview: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type QuizDifficulty = "Beginner" | "Intermediate" | "Advanced" | "Expert";
+
+export type QuizExplorerRow = {
+  quiz_id: string;
+  title: string;
+  description: string;
+  creator_display_name: string;
+  creator_username: string | null;
+  associated_team: string | null;
+  program: Program;
+  category: string;
+  difficulty: QuizDifficulty;
+  question_count: number;
+  estimated_minutes: number;
+  play_count: number;
+  favorite_count: number;
+  average_rating: number | null;
+  rating_count: number;
+  created_at: string;
+};
+
+export type QuizDetailData = QuizExplorerRow & {
+  visibility: TeamVisibility;
+  status: QuizStatus;
+  allow_question_preview: boolean;
+  is_favorited: boolean;
+  my_rating: number | null;
+  is_creator: boolean;
+};
+
+export type QuizQuestionPreview = {
+  question_position: number;
+  prompt: string;
+  options: string[];
 };
 
 export type QuizQuestion = {
@@ -272,8 +310,10 @@ export interface Database {
           description?: string;
           program: Program;
           category: string;
+          difficulty?: QuizDifficulty;
           visibility?: TeamVisibility;
           status?: QuizStatus;
+          allow_question_preview?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -282,8 +322,10 @@ export interface Database {
           description?: string;
           program?: Program;
           category?: string;
+          difficulty?: QuizDifficulty;
           visibility?: TeamVisibility;
           status?: QuizStatus;
+          allow_question_preview?: boolean;
           updated_at?: string;
         };
         Relationships: [];
@@ -472,6 +514,8 @@ export interface Database {
           _category: string;
           _visibility: TeamVisibility;
           _status: QuizStatus;
+          _difficulty: QuizDifficulty;
+          _allow_question_preview: boolean;
           _questions: Json;
         };
         Returns: string;
@@ -485,6 +529,8 @@ export interface Database {
           _category: string;
           _visibility: TeamVisibility;
           _status: QuizStatus;
+          _difficulty: QuizDifficulty;
+          _allow_question_preview: boolean;
           _questions: Json;
         };
         Returns: undefined;
@@ -535,7 +581,46 @@ export interface Database {
       };
       get_popular_public_quizzes: {
         Args: { _limit?: number };
-        Returns: (Omit<Quiz, "created_by"> & { attempt_count: number })[];
+        Returns: {
+          id: string;
+          title: string;
+          description: string;
+          program: Program;
+          category: string;
+          visibility: TeamVisibility;
+          status: QuizStatus;
+          created_at: string;
+          updated_at: string;
+          attempt_count: number;
+        }[];
+      };
+      get_quiz_explorer: {
+        Args: {
+          _program?: string | null;
+          _category?: string | null;
+          _difficulty?: string | null;
+          _search?: string | null;
+          _sort?: string | null;
+          _limit?: number | null;
+          _offset?: number | null;
+        };
+        Returns: QuizExplorerRow[];
+      };
+      get_quiz_detail: {
+        Args: { _quiz_id: string };
+        Returns: QuizDetailData[];
+      };
+      get_public_quiz_question_preview: {
+        Args: { _quiz_id: string };
+        Returns: QuizQuestionPreview[];
+      };
+      set_quiz_favorite: {
+        Args: { _quiz_id: string; _favorited: boolean };
+        Returns: undefined;
+      };
+      rate_public_quiz: {
+        Args: { _quiz_id: string; _rating: number };
+        Returns: undefined;
       };
       get_home_dashboard_stats: {
         Args: Record<string, never>;

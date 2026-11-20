@@ -4,7 +4,8 @@ import { ArrowDown, ArrowLeft, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { createQuiz, getQuizEditor, updateQuiz, type QuizChanges } from "../services/quizService";
 import { canCreateQuizzes } from "../services/teamService";
-import type { Program, QuizQuestionInput, QuizStatus, TeamVisibility } from "../types/database";
+import { QUIZ_CATEGORIES, QUIZ_DIFFICULTIES } from "../content/quizTaxonomy";
+import type { Program, QuizDifficulty, QuizQuestionInput, QuizStatus, TeamVisibility } from "../types/database";
 
 const programs: Program[] = ["FLL", "FTC", "FRC", "General FIRST"];
 
@@ -20,9 +21,11 @@ export function QuizEditorPage() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [program, setProgram] = useState<Program>("FTC");
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState<string>(QUIZ_CATEGORIES[0]);
+  const [difficulty, setDifficulty] = useState<QuizDifficulty>("Intermediate");
   const [visibility, setVisibility] = useState<TeamVisibility>("private");
   const [status, setStatus] = useState<QuizStatus>("draft");
+  const [allowQuestionPreview, setAllowQuestionPreview] = useState(false);
   const [questions, setQuestions] = useState<QuizQuestionInput[]>([makeQuestion()]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -56,8 +59,10 @@ export function QuizEditorPage() {
       setDescription(editor.quiz.description);
       setProgram(editor.quiz.program);
       setCategory(editor.quiz.category);
+      setDifficulty(editor.quiz.difficulty);
       setVisibility(editor.quiz.visibility);
       setStatus(editor.quiz.status);
+      setAllowQuestionPreview(editor.quiz.allow_question_preview);
       setQuestions(editor.questions.length ? editor.questions : [makeQuestion()]);
     }).catch((loadError: unknown) => {
       if (active) setError(loadError instanceof Error ? loadError.message : "Could not load this quiz.");
@@ -125,8 +130,10 @@ export function QuizEditorPage() {
       description: description.trim(),
       program,
       category: category.trim(),
+      difficulty,
       visibility,
       status,
+      allow_question_preview: allowQuestionPreview,
       questions: cleanedQuestions,
     };
 
@@ -190,10 +197,18 @@ export function QuizEditorPage() {
               </label>
               <label className="field">
                 <span>Category</span>
-                <input value={category} onChange={(event) => setCategory(event.target.value)} maxLength={80} placeholder="Game rules, robot design…" required />
+                <select value={category} onChange={(event) => setCategory(event.target.value)} required>
+                  {QUIZ_CATEGORIES.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
               </label>
             </div>
             <div className="form-row">
+              <label className="field">
+                <span>Difficulty</span>
+                <select value={difficulty} onChange={(event) => setDifficulty(event.target.value as QuizDifficulty)}>
+                  {QUIZ_DIFFICULTIES.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </label>
               <label className="field">
                 <span>Who can find this quiz?</span>
                 <select value={visibility} onChange={(event) => setVisibility(event.target.value as TeamVisibility)}>
@@ -209,6 +224,14 @@ export function QuizEditorPage() {
                 </select>
               </label>
             </div>
+            <label className="quiz-draft-toggle">
+              <input
+                type="checkbox"
+                checked={allowQuestionPreview}
+                onChange={(event) => setAllowQuestionPreview(event.target.checked)}
+              />
+              Allow a preview of the first five questions on the public quiz page
+            </label>
           </div>
         </section>
 

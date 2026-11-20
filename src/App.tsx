@@ -14,6 +14,7 @@ import { AboutPage } from "./pages/AboutPage";
 import { QuizEditorPage } from "./pages/QuizEditorPage";
 import { QuizDetailPage, QuizResultsPage, QuizTakePage } from "./pages/QuizPracticePages";
 import { QuizzesPage } from "./pages/QuizzesPage";
+import { QuizExplorerPage } from "./pages/QuizExplorerPage";
 import { GameCenterPage } from "./pages/GameCenterPage";
 import { LiveGamePage } from "./pages/LiveGamePage";
 
@@ -34,6 +35,7 @@ function AppRoutes() {
       <Route element={<SiteLayout />}>
         <Route index element={<HomePage />} />
         <Route path="about" element={<AboutPage />} />
+        <Route path="explore" element={<QuizExplorerPage />} />
         <Route path="sign-in" element={<AuthPage mode="sign-in" />} />
         <Route path="sign-up" element={<AuthPage mode="sign-up" />} />
         <Route path="forgot-password" element={<ForgotPasswordPage />} />
@@ -137,11 +139,7 @@ function AppRoutes() {
         />
         <Route
           path="quizzes/:quizId"
-          element={(
-            <RouteGuard>
-              <QuizDetailPage />
-            </RouteGuard>
-          )}
+          element={<QuizDetailPage />}
         />
         <Route path="users/:username" element={<PublicProfilePage />} />
         <Route path="404" element={<NotFoundPage />} />

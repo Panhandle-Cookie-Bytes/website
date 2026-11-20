@@ -1,6 +1,6 @@
 # Robotics Quizzes
 
-A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds public quiz discovery and a personalized homepage dashboard. Phase 5 adds hosted live quiz rooms with synchronized questions, timed scoring, and results. Phase 6 adds team logos, configurable student quiz creation, team activity, statistics, and leaderboards.
+A FIRST Robotics learning platform built with React, TypeScript, Vite, and Supabase. Phase 1 provides authentication and profiles. Phase 2 adds team spaces and role-based membership. Phase 3 adds quiz authoring, discovery, team assignments, practice, scoring, and answer review. Phase 4 adds a personalized homepage dashboard. Phase 5 adds hosted live quiz rooms with synchronized questions, timed scoring, and results. Phase 6 adds team logos, configurable student quiz creation, team activity, statistics, and leaderboards. Phase 7 adds public quiz discovery, ratings, favorites, and safe question previews.
 
 ## Stack and theme
 
@@ -41,6 +41,7 @@ In the Supabase project, open **SQL Editor** and run these files in order:
 4. [`supabase/migrations/20261116000000_phase4_homepage.sql`](./supabase/migrations/20261116000000_phase4_homepage.sql) — enables anonymous read-only access to published public quiz metadata and adds protected dashboard statistics/activity functions.
 5. [`supabase/migrations/20261116010000_phase5_live_games.sql`](./supabase/migrations/20261116010000_phase5_live_games.sql) — creates live game rooms, secure join codes, server-side question snapshots and scoring, protected game RPCs, and adds safe room state to Supabase Realtime.
 6. [`supabase/migrations/20261117000000_phase6_team_management.sql`](./supabase/migrations/20261117000000_phase6_team_management.sql) — adds team quiz-creation settings, team dashboard statistics/activity/leaderboard RPCs, private team-logo storage, and migrates live-game join codes to 8 characters.
+7. [`supabase/migrations/20261119000000_phase7_quiz_explorer.sql`](./supabase/migrations/20261119000000_phase7_quiz_explorer.sql) — adds quiz difficulty and preview settings, public explorer/detail/preview RPCs, category normalization, favorites, and ratings.
 
 If earlier migrations have already been applied, run only the migrations you have not applied yet. Do not skip Phase 2; Phase 3 and Phase 4 depend on its team tables and access helpers.
 
@@ -89,6 +90,7 @@ npm run deploy
 
 - `/` — homepage and entry points for teams and quiz practice.
 - `/about` — project mission and creator profiles.
+- `/explore` — public quiz explorer with search, FIRST program/category/difficulty filters, and sorting.
 
 The signed-out homepage includes platform information, public quizzes ranked by completed attempts, and account creation links. The signed-in homepage shows your teams, recent quiz activity, recommendations based on your preferred FIRST program and team assignments, and database-derived completed quiz, score, correct-answer, and streak statistics. Users without activity see empty states instead of fabricated progress. The Phase 4 migration only exposes published public quiz metadata to anonymous visitors; private quizzes, answer keys, and personal dashboard data remain restricted.
 
@@ -116,6 +118,7 @@ The creator is the team owner. Owners can appoint administrators; owners and adm
 
 ### Quizzes
 
+- `/explore` — browse published public quizzes, filter by program, category, and difficulty, and sort by popularity, rating, recency, plays, or length.
 - `/quizzes` — discover public and assigned quizzes, view your own drafts, and see your quiz activity.
 - `/quizzes/create` — write a multiple-choice quiz and save it as a draft or publish it.
 - `/quizzes/:quizId` — view details and start or repeat a quiz.
@@ -123,7 +126,7 @@ The creator is the team owner. Owners can appoint administrators; owners and adm
 - `/quizzes/:quizId/take` — answer and submit a quiz.
 - `/quizzes/:quizId/results/:attemptId` — see your score, selected answers, correct answers, and explanations.
 
-Quizzes support up to 50 questions and 2–6 answer choices per question. Authors select the correct answer and may add an explanation. Drafts are private to their creator. Published quizzes may be public or private; coaches can assign public quizzes or published quizzes they created to their team, with an optional due date. A quiz with existing attempts cannot have its question set changed. Unassign it before changing it back to draft.
+Quizzes support up to 50 questions and 2–6 answer choices per question. Authors select a FIRST program, category, and difficulty; they may allow a preview of up to five questions on public quiz pages. The public explorer shows only published public quizzes. Quiz cards and details display creator attribution (respecting profile visibility), public associated teams, question count, estimated time (one minute per question), plays, favorites, and community ratings. Signed-in users can save quizzes and rate public quizzes from one to five stars. Correct answers and explanations are never returned by public quiz details or preview functions. Drafts are private to their creator. Published quizzes may be public or private; coaches can assign public quizzes or published quizzes they created to their team, with an optional due date. A quiz with existing attempts cannot have its question set changed. Unassign it before changing it back to draft.
 
 Correct answers are not readable through the normal quiz/question APIs or sent to the browser before submission. Supabase functions validate submissions and calculate scores; completed result data is only available to the attempt’s owner.
 
@@ -163,6 +166,16 @@ Correct answers are not readable through the normal quiz/question APIs or sent t
 5. Test team member, coach, and administrator limits and role permissions. Confirm students cannot manage team settings or the roster.
 6. Create a live game and verify its code is exactly 8 characters from the unambiguous alphabet; join using the code. Confirm older active game rooms show their new code after migration.
 
+## Test Phase 7
+
+1. Apply the Phase 7 migration after Phases 1–6. Confirm it normalizes existing quiz categories and completes successfully.
+2. Sign out and open `/explore`. Verify only published public quizzes are listed and program, category, difficulty, search, and all five sort options work.
+3. Open a public quiz detail page while signed out. Confirm creator attribution, public team, difficulty, question count, estimated time, plays, and rating information are shown, while practice, live games, favorites, and ratings require sign-in.
+4. As a quiz author, enable question previews and publish the quiz. Confirm the detail page shows up to five prompts and choices but never reveals correct answers or explanations. Disable previews and verify the questions are no longer returned.
+5. As two signed-in users, save and unsave a quiz and submit ratings. Confirm favorite totals and average ratings update, and the explorer’s Highest rated and Most popular sorting reflects them.
+6. Confirm drafts remain available to their creator in the signed-in quiz library and can still be opened and edited from their details page.
+7. Test the explorer and details page on desktop and a narrow mobile viewport.
+
 Run local code checks:
 
 ```sh
@@ -171,4 +184,4 @@ npm run build
 npm run preview
 ```
 
-The footer version is `0:02:6`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
+The footer version is `0:02:7`; for each future website change, increment its last segment and roll over from 9 to 1 while incrementing the segment to its left.
